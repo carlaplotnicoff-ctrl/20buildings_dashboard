@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>20 Buildings Pipeline Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242836;
+    --border: #2e3347;
+    --text: #e4e6f0;
+    --text2: #8b8fa3;
+    --accent: #6c63ff;
+    --green: #22c55e;
+    --blue: #3b82f6;
+    --yellow: #eab308;
+    --orange: #f97316;
+    --red: #ef4444;
+    --gray: #6b7280;
+    --pink: #ec4899;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* Header */
+  .header { padding: 24px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+  .header h1 { font-size: 20px; font-weight: 600; }
+  .header h1 span { color: var(--accent); }
+  .header-meta { font-size: 13px; color: var(--text2); }
+
+  /* KPI strip */
+  .kpi-strip { display: flex; gap: 12px; padding: 20px 32px; flex-wrap: wrap; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; flex: 1; min-width: 140px; }
+  .kpi-value { font-size: 28px; font-weight: 700; }
+  .kpi-label { font-size: 12px; color: var(--text2); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  /* Controls */
+  .controls { padding: 16px 32px; display: flex; flex-direction: column; gap: 10px; }
+  .controls-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .controls-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px; white-space: nowrap; }
+  .search-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; color: var(--text); font-size: 14px; width: 280px; outline: none; }
+  .search-box:focus { border-color: var(--accent); }
+  .search-box::placeholder { color: var(--text2); }
+  .filter-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; color: var(--text2); font-size: 12px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .filter-btn:hover { border-color: var(--accent); color: var(--text); }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* Tabs */
+  .tabs { padding: 0 32px; display: flex; gap: 0; border-bottom: 1px solid var(--border); }
+  .tab { padding: 12px 20px; font-size: 14px; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* Content */
+  .content { padding: 20px 32px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 12px; color: var(--text2); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:hover td { background: var(--surface); }
+  tr.hidden { display: none; }
+
+  /* Stage badges */
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge-apollo { background: rgba(59,130,246,0.15); color: var(--blue); }
+  .badge-scored { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-sequences { background: rgba(108,99,255,0.15); color: var(--accent); }
+  .badge-enrolled { background: rgba(249,115,22,0.15); color: var(--orange); }
+  .badge-replied { background: rgba(236,72,153,0.15); color: var(--pink); }
+  .badge-dm { background: rgba(34,197,94,0.25); color: var(--green); font-weight: 700; }
+  .badge-stale { background: rgba(107,114,128,0.25); color: var(--gray); text-decoration: line-through; }
+  .badge-meeting { background: rgba(234,179,8,0.15); color: var(--yellow); }
+  .badge-signed { background: rgba(34,197,94,0.35); color: var(--green); }
+  .badge-dnc { background: rgba(239,68,68,0.15); color: var(--red); }
+  .badge-contacted { background: rgba(107,114,128,0.15); color: var(--gray); }
+  .badge-flagged { background: rgba(234,179,8,0.15); color: var(--yellow); }
+
+  /* Tier bars */
+  .tier-bar { display: flex; height: 20px; border-radius: 4px; overflow: hidden; min-width: 100px; }
+  .tier-bar div { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: #fff; }
+  .tier-p1 { background: var(--green); }
+  .tier-p2 { background: var(--blue); }
+  .tier-p3 { background: var(--yellow); color: #000 !important; }
+  .tier-p4 { background: var(--gray); }
+
+  /* Company cards */
+  .company-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 16px; }
+  .company-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .company-card.dnc { border-color: var(--red); opacity: 0.7; }
+  .company-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .company-meta { font-size: 12px; color: var(--text2); margin-bottom: 12px; }
+  .company-buildings { list-style: none; }
+  .company-buildings li { padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+  .company-buildings li:first-child { border-top: none; }
+  .dnc-badge { background: var(--red); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+
+  /* Funnel */
+  .funnel-container { display: flex; gap: 40px; flex-wrap: wrap; }
+  .funnel-city { flex: 1; min-width: 300px; }
+  .funnel-city h3 { font-size: 16px; margin-bottom: 16px; }
+  .funnel-bar { display: flex; align-items: center; margin-bottom: 8px; }
+  .funnel-label { width: 160px; font-size: 12px; color: var(--text2); text-align: right; padding-right: 12px; }
+  .funnel-fill { height: 28px; border-radius: 4px; display: flex; align-items: center; padding-left: 10px; font-size: 12px; font-weight: 600; color: #fff; min-width: 30px; transition: width 0.3s; }
+  .funnel-count { margin-left: 8px; font-size: 12px; color: var(--text2); }
+
+  /* Tier chart area */
+  .tier-chart-container { display: flex; gap: 32px; flex-wrap: wrap; }
+  .tier-summary { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .tier-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 24px; text-align: center; min-width: 120px; }
+  .tier-card-value { font-size: 32px; font-weight: 700; }
+  .tier-card-label { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+  /* Expand row */
+  .expand-row td { padding: 16px 24px; background: var(--surface2); }
+  .expand-content { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; }
+  .expand-content dt { color: var(--text2); }
+  .expand-content dd { margin-bottom: 8px; }
+
+  /* Notes highlight */
+  .note-flag { color: var(--yellow); font-weight: 600; }
+  .note-dnc { color: var(--red); font-weight: 600; }
+
+  /* Progress bar */
+  .progress-bar { background: var(--surface); border-radius: 8px; height: 24px; overflow: hidden; position: relative; border: 1px solid var(--border); }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); border-radius: 8px; transition: width 0.5s; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; min-width: 40px; }
+
+  .no-results { text-align: center; padding: 40px; color: var(--text2); font-size: 14px; }
+
+  /* Legend */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 12px 0; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+  @media (max-width: 768px) {
+    .header, .kpi-strip, .controls, .content { padding-left: 16px; padding-right: 16px; }
+    .search-box { width: 100%; }
+    .company-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>20 Buildings <span>Pipeline Dashboard</span></h1>
+  <div class="header-meta">Cloud9 | Campaign 2026 | Last updated: March 19, 2026</div>
+</div>
+
+<!-- KPI Strip -->
+<div class="kpi-strip" id="kpi-strip"></div>
+
+<!-- Goal Progress -->
+<div style="padding: 0 32px 16px;">
+  <div style="font-size: 12px; color: var(--text2); margin-bottom: 6px;">GOAL: 20 BUILDINGS SIGNED BY DEC 2026</div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="goal-progress" style="width: 1%;">0 / 20</div>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <div class="controls-row">
+    <input type="text" class="search-box" id="search" placeholder="Search buildings, companies, cities...">
+    <div style="width:1px;height:24px;background:var(--border);margin:0 8px;"></div>
+    <span class="controls-label">City</span>
+    <button class="filter-btn active" data-city="all">All</button>
+    <button class="filter-btn" data-city="Houston">Houston</button>
+    <button class="filter-btn" data-city="Chicago">Chicago</button>
+  </div>
+  <div class="controls-row">
+    <span class="controls-label">Stage</span>
+    <button class="filter-btn active" data-stage="all">All Stages</button>
+    <button class="filter-btn" data-stage="active">Active Pipeline</button>
+    <button class="filter-btn" data-stage="APOLLO-READY">Apollo Ready</button>
+    <button class="filter-btn" data-stage="SEQUENCES-WRITTEN">Sequences Written</button>
+    <button class="filter-btn" data-stage="ENROLLED">Enrolled</button>
+    <button class="filter-btn" data-stage="DM-FOUND">DM Found</button>
+    <button class="filter-btn" data-stage="ALREADY-CONTACTED">Already Contacted</button>
+    <button class="filter-btn" data-stage="DNC">DNC</button>
+    <button class="filter-btn" data-stage="FLAGGED">Flagged</button>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" data-tab="buildings">Buildings</div>
+  <div class="tab" data-tab="companies">Companies</div>
+  <div class="tab" data-tab="pipeline">City Pipeline</div>
+  <div class="tab" data-tab="tiers">Tier Breakdown</div>
+</div>
+
+<!-- Tab Content -->
+<div class="content">
+
+  <!-- Buildings Tab -->
+  <div class="tab-content active" id="tab-buildings">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Building</th>
+            <th>City</th>
+            <th>Owner</th>
+            <th>Units</th>
+            <th>PP</th>
+            <th>Stage</th>
+            <th>Contacts</th>
+            <th>Tier Split</th>
+            <th>Batch</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="buildings-tbody"></tbody>
+      </table>
+      <div class="no-results" id="no-results" style="display:none;">No buildings match your search.</div>
+    </div>
+  </div>
+
+  <!-- Companies Tab -->
+  <div class="tab-content" id="tab-companies">
+    <div class="company-grid" id="companies-grid"></div>
+  </div>
+
+  <!-- Pipeline Tab -->
+  <div class="tab-content" id="tab-pipeline">
+    <div class="funnel-container" id="funnel-container"></div>
+  </div>
+
+  <!-- Tiers Tab -->
+  <div class="tab-content" id="tab-tiers">
+    <div class="tier-summary" id="tier-summary"></div>
+    <div style="max-width: 700px; margin: 0 auto;">
+      <canvas id="tier-chart"></canvas>
+    </div>
+    <div style="margin-top: 24px;">
+      <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--text2);">Per-Building Tier Breakdown (Houston — scored contacts only)</h3>
+      <table>
+        <thead><tr><th>Building</th><th>P1</th><th>P2</th><th>P3</th><th>P4</th><th>Total</th><th>Visual</th></tr></thead>
+        <tbody id="tier-table-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// DATA — Edit this section or connect to Google Sheets
+// ============================================================
+// To connect to Google Sheets:
+// 1. Publish your sheet: File → Share → Publish to web → CSV
+// 2. Set SHEET_URL below to the published CSV URL
+// 3. Set USE_SHEET = true
+// The sheet must have the same columns as the buildings array below.
+
+const USE_SHEET = true;
+const CITY_SHEETS = [
+  // Add each city's published Google Sheet CSV URL here
+  // To get the URL: File → Share → Publish to web → CSV → Publish → Copy URL
+  { city: 'Houston', url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRu8wNBqM1uod5C3p2F9kdp3HzY9AEQNbQ9dCegMn2U3ZnPdY8Rhjq0eE2p60m4Ke1FLDdzuRO3PmM9/pub?gid=648276350&single=true&output=csv' },
+  { city: 'Chicago', url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQozWVYmA4cM_9M_a5b5NpPKTnjaI2uxioMn_ARzdDsasoc1SFeSUFYj7Wzumou29DgHiU2mjbv54yb/pub?gid=636368127&single=true&output=csv' },
+  // { city: 'NewCity', url: '' },  // Add new cities by copying this line
+];
+const AUTO_REFRESH_MINUTES = 5;
+
+const buildings = [
+  {building_name:"Aspire Post Oak",city:"Houston",owner:"The Dinerstein Companies",owner_2:"",pm:"Dinerstein Companies",address:"1616 Post Oak Blvd, Houston TX",units:383,pp:9,stage:"SEQUENCES-WRITTEN",p1:1,p2:5,p3:5,p4:54,total:65,sequence:"Houston P1-P4",hubspot:"CSV Ready",batch:"Houston Batch 1",notes:"Highest PP score"},
+  {building_name:"Aris Market Square",city:"Houston",owner:"Hasta Capital",owner_2:"",pm:"Hines",address:"409 Travis St, Houston TX",units:274,pp:8,stage:"SEQUENCES-WRITTEN",p1:3,p2:4,p3:5,p4:2,total:14,sequence:"Houston P1-P4",hubspot:"CSV Ready",batch:"Houston Batch 1",notes:"Hines is PM only. Duplicate Apollo export"},
+  {building_name:"Hanover BLVD Place",city:"Houston",owner:"The Hanover Co",owner_2:"Algn Solutions LLC",pm:"Hanover Company",address:"1770 S Post Oak Ln, Houston TX",units:281,pp:8,stage:"SEQUENCES-WRITTEN",p1:3,p2:4,p3:0,p4:111,total:118,sequence:"Houston P1-P4",hubspot:"CSV Ready",batch:"Houston Batch 1",notes:"Shared contact pool with Autry Park + Post Oak"},
+  {building_name:"Hanover Autry Park",city:"Houston",owner:"Hanover Company",owner_2:"",pm:"Hanover Company",address:"811 Buffalo Park Dr",units:324,pp:5,stage:"SEQUENCES-WRITTEN",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"Houston P1-P4",hubspot:"CSV Ready",batch:"Houston Batch 1",notes:"Contacts shared under Hanover BLVD Place"},
+  {building_name:"Hanover Post Oak",city:"Houston",owner:"The Hanover Co",owner_2:"",pm:"Hanover Company",address:"1750 Sky Lark Ln, Houston TX",units:355,pp:null,stage:"SEQUENCES-WRITTEN",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"Houston P1-P4",hubspot:"CSV Ready",batch:"Houston Batch 1",notes:"PP SCORE MISSING. Contacts shared under Hanover BLVD Place"},
+  {building_name:"The James",city:"Houston",owner:"Lionstone Investments",owner_2:"",pm:"The Morgan Group",address:"2303 Mid Ln",units:342,pp:5,stage:"SEQUENCES-WRITTEN",p1:2,p2:8,p3:1,p4:4,total:15,sequence:"Houston P1-P4",hubspot:"CSV Ready",batch:"Houston Batch 1",notes:"ZoomInfo false positives risk (Morgan Group PM contacts)"},
+  {building_name:"Market Square Tower",city:"Houston",owner:"Woodbranch Management",owner_2:"",pm:"Woodbranch Management",address:"777 Preston St",units:463,pp:3,stage:"SEQUENCES-WRITTEN",p1:0,p2:0,p3:1,p4:1,total:2,sequence:"Houston P1-P4",hubspot:"CSV Ready",batch:"Houston Batch 1",notes:"Small contact pool"},
+  {building_name:"Arrive Upper Kirby",city:"Houston",owner:"FPA Multifamily",owner_2:"",pm:"",address:"Houston",units:271,pp:null,stage:"DNC",p1:0,p2:0,p3:0,p4:0,total:31,sequence:"",hubspot:"Excluded",batch:"Houston Batch 1",notes:"DNC — CIO Daniel Kaplan hard declined"},
+  {building_name:"Brava",city:"Houston",owner:"Hines",owner_2:"",pm:"Hines",address:"Houston",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:1,p2:1,p3:0,p4:0,total:2,sequence:"",hubspot:"Excluded",batch:"Houston Batch 1",notes:"~76 Hines contacts in system. Zero outreach to date"},
+  {building_name:"La Colombe d'Or",city:"Houston",owner:"Hines",owner_2:"Nuveen (TIAA)",pm:"Hines",address:"Houston",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"Excluded",batch:"Houston Batch 1",notes:"Same Hines pool. Nuveen not in system"},
+  {building_name:"Parkside Residences",city:"Houston",owner:"Trammell Crow Co (CBRE)",owner_2:"Daiwa House",pm:"Trammell Crow",address:"Houston",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:2,p2:0,p3:0,p4:0,total:2,sequence:"",hubspot:"Excluded",batch:"Houston Batch 1",notes:"Carla has contacts. Daiwa House not in system"},
+  {building_name:"The 808 Cleveland",city:"Chicago",owner:"Bayview USA Holdings",owner_2:"DAC Development",pm:"PeakMade",address:"460 W Chicago Ave",units:278,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"Owners NEW. 2BR DOM: 20 days"},
+  {building_name:"Windsor North + Vine",city:"Chicago",owner:"White Oak Realty Partners",owner_2:"CA Ventures",pm:"Windsor Realty",address:"633 W North Ave",units:261,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"Very high 2BR DOM: 182 days"},
+  {building_name:"670 N May St",city:"Chicago",owner:"Bond Companies",owner_2:"",pm:"Cagan Mgmt",address:"670 N May St",units:113,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"Small building. 2BR DOM: 2 days"},
+  {building_name:"1100 W Grand Ave",city:"Chicago",owner:"Wildwood Investments",owner_2:"",pm:"Cagan Mgmt",address:"1100 W Grand Ave",units:99,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"High 2BR DOM: 110 days"},
+  {building_name:"The Elizabeth Chicago",city:"Chicago",owner:"Sterling Bay Cos",owner_2:"Ascentris",pm:"Sterling Bay",address:"225 N Elizabeth St",units:350,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"$2000 off concessions. 2BR DOM: 182 days"},
+  {building_name:"Roosevelt Collection",city:"Chicago",owner:"PGIM Real Estate",owner_2:"",pm:"Bozzuto",address:"150 W Roosevelt Rd",units:342,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"Bozzuto PM (9 in system). PGIM is fresh. 2BR DOM: 197 days"},
+  {building_name:"Nevele22",city:"Chicago",owner:"Lipe Property Company",owner_2:"",pm:"Lipe Property",address:"1122 W Chicago Ave",units:97,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"Small independent owner. 2BR DOM: 64 days"},
+  {building_name:"AMLI 900",city:"Chicago",owner:"AMLI Residential",owner_2:"",pm:"",address:"Chicago",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:24,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"Dan Gladden returned call — has corporate housing dept"},
+  {building_name:"Imprint",city:"Chicago",owner:"CMK Companies",owner_2:"",pm:"Greystar",address:"Chicago",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:40,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"CMK = Zalcantar LLC. Both owner and PM in system"},
+  {building_name:"Old Town Park Tower 3",city:"Chicago",owner:"Onni Group",owner_2:"",pm:"",address:"Chicago",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:41,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"41 contacts. No Right AM found"},
+  {building_name:"Xavier",city:"Chicago",owner:"Morguard REIT",owner_2:"",pm:"",address:"Chicago",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:52,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"Kevin Paustian (AM) soft objection: 95% occ. Door open"},
+  {building_name:"Reside On Green St",city:"Chicago",owner:"Newcastle Ltd",owner_2:"",pm:"",address:"Chicago",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:5,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"DNC — debt covenants restrict flexible-term leasing"},
+  {building_name:"Reside On Jackson",city:"Chicago",owner:"Newcastle Ltd",owner_2:"",pm:"",address:"Chicago",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:5,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"Same Newcastle structural block"},
+  {building_name:"1241 W Jackson Blvd",city:"Chicago",owner:"Newcastle Ltd",owner_2:"",pm:"",address:"Chicago",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:5,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"Same Newcastle structural block"},
+  {building_name:"868 N Wells",city:"Chicago",owner:"JDL Development",owner_2:"",pm:"",address:"Chicago",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:8,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"COO: none of my business. EVP AM: not interested"},
+  {building_name:"The Westerly",city:"Chicago",owner:"Range Group LLC",owner_2:"",pm:"Bozzuto",address:"Chicago",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:9,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"PM match only. Owner Range Group is NEW"},
+  {building_name:"Burnham Pointe",city:"Chicago",owner:"Intercontinental RE",owner_2:"",pm:"Morguard REIT",address:"Chicago",units:null,pp:null,stage:"FLAGGED",p1:0,p2:0,p3:0,p4:0,total:24,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"Fuzzy match. All 3 entities in system. Recommend: Already Contacted"},
+  {building_name:"NEXT",city:"Chicago",owner:"Fifield Realty Corp",owner_2:"",pm:"",address:"Chicago",units:null,pp:null,stage:"FLAGGED",p1:0,p2:0,p3:0,p4:0,total:4,sequence:"",hubspot:"",batch:"Chicago Enrich 3.0",notes:"Fuzzy: Fifield Realty = Fifield. Recommend: Already Contacted"},
+  {building_name:"Straits Row",city:"Chicago",owner:"Melrose Ascension Capital",owner_2:"Q Investment Partners",pm:"PeakMade Real Estate",address:"633 S LaSalle St",units:132,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"Premium pricing $6K+ 2BR"},
+  {building_name:"The Dylan",city:"Chicago",owner:"Sterling Bay",owner_2:"Ascentris",pm:"Sterling Bay Property Mgmt",address:"160 N Morgan St",units:282,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"Same ownership as The Elizabeth. Bundle Apollo pull"},
+  {building_name:"Grand Plaza",city:"Chicago",owner:"Interventure Advisors",owner_2:"",pm:"Draper and Kramer",address:"540 N State St",units:481,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"Draper and Kramer = PM only. Target Interventure"},
+  {building_name:"Hubbard221",city:"Chicago",owner:"TBD",owner_2:"",pm:"Draper and Kramer",address:"221 W Hubbard St",units:195,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"OWNERSHIP RESEARCH NEEDED"},
+  {building_name:"Eleven Thirty",city:"Chicago",owner:"TBD",owner_2:"",pm:"Draper and Kramer",address:"1130 S Michigan Ave",units:656,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"OWNERSHIP RESEARCH NEEDED. 656 units"},
+  {building_name:"Aspire Residences",city:"Chicago",owner:"Antheus Capital",owner_2:"",pm:"Draper and Kramer",address:"2111 S Wabash Ave",units:275,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"Owner NEW"},
+  {building_name:"Sentral Michigan Avenue",city:"Chicago",owner:"Iconiq Capital",owner_2:"Sentral",pm:"Sentral",address:"808 S Michigan Ave",units:479,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"Up to 2 months free. Both owners NEW"},
+  {building_name:"NEMA Chicago",city:"Chicago",owner:"Crescent Heights",owner_2:"Ping An Insurance",pm:"Crescent Heights",address:"1210 S Indiana Ave",units:800,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"800 units. 59 available. Crescent Heights NOT in system"},
+  {building_name:"820 Michigan by 3L Living",city:"Chicago",owner:"Creative Designs",owner_2:"",pm:"3L Living",address:"820 S Michigan Ave",units:150,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"Small building. Owner NEW"},
+  {building_name:"Optima Signature",city:"Chicago",owner:"Optima Inc.",owner_2:"DeBartolo / OPSEU",pm:"Optima Real Estate",address:"225 N Elizabeth St",units:350,pp:null,stage:"APOLLO-READY",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"4 owners. LaSalle in system — target Optima/DeBartolo/OPSEU"},
+  {building_name:"Onni Fulton Market",city:"Chicago",owner:"Onni Group",owner_2:"",pm:"",address:"Chicago",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:41,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"41 contacts. No Right AM yet"},
+  {building_name:"Arrive Michigan Avenue",city:"Chicago",owner:"FPA Multifamily",owner_2:"",pm:"",address:"Chicago",units:null,pp:null,stage:"DNC",p1:0,p2:0,p3:0,p4:0,total:17,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"FPA CLOSED. CIO hard declined"},
+  {building_name:"Sky55",city:"Chicago",owner:"Brookfield AM",owner_2:"",pm:"Bozzuto",address:"Chicago",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:9,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"PM match only. Brookfield AM (owner) NOT in system"},
+  {building_name:"1001 South State",city:"Chicago",owner:"Property Reserve",owner_2:"",pm:"Greystar",address:"Chicago",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:36,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"PM match only. Property Reserve NOT in system"},
+  {building_name:"1407 on Michigan",city:"Chicago",owner:"IRA Capital",owner_2:"",pm:"BJB Properties",address:"Chicago",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:3,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"PM match only. IRA Capital NOT in system"},
+  {building_name:"1401 South State",city:"Chicago",owner:"La Caisse",owner_2:"",pm:"BJB Properties",address:"Chicago",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:3,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"PM match only. La Caisse NOT in system"},
+  {building_name:"Eleven40",city:"Chicago",owner:"Mitsubishi Corp",owner_2:"",pm:"Bozzuto",address:"Chicago",units:null,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:9,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"PM match only. Mitsubishi Corp NOT in system"},
+  {building_name:"Arthur on Aberdeen",city:"Chicago",owner:"LG Development Group",owner_2:"",pm:"",address:"Chicago",units:null,pp:null,stage:"FLAGGED",p1:0,p2:0,p3:0,p4:0,total:7,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"Fuzzy: LG Development Group vs LG Group. Confirm"},
+  {building_name:"The Jax",city:"Chicago",owner:"MZ Capital Partners",owner_2:"",pm:"Morguard",address:"Chicago",units:null,pp:null,stage:"FLAGGED",p1:0,p2:0,p3:0,p4:0,total:52,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"PM match (Morguard). Owner MZ Capital is NEW"},
+  {building_name:"The Sinclair",city:"Chicago",owner:"Fifield Cos.",owner_2:"",pm:"",address:"Chicago",units:null,pp:null,stage:"FLAGGED",p1:0,p2:0,p3:0,p4:0,total:4,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"Almost certainly = Fifield. Recommend: Already Contacted"},
+  {building_name:"The Duncan",city:"Chicago",owner:"CEDARst Companies",owner_2:"",pm:"",address:"Chicago",units:null,pp:null,stage:"FLAGGED",p1:0,p2:0,p3:0,p4:0,total:12,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"Same company diff name. Recommend: Already Contacted"},
+  {building_name:"Coeval + 1400 Wabash",city:"Chicago",owner:"CMK Companies",owner_2:"",pm:"",address:"Chicago",units:null,pp:null,stage:"FLAGGED",p1:0,p2:0,p3:0,p4:0,total:4,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"CMK = Zalcantar DBA. Recommend: Already Contacted"},
+  {building_name:"Optima Signature (LaSalle)",city:"Chicago",owner:"LaSalle Investment Mgmt",owner_2:"",pm:"",address:"Chicago",units:null,pp:null,stage:"FLAGGED",p1:0,p2:0,p3:0,p4:0,total:24,sequence:"",hubspot:"",batch:"Chicago Enrich 2.0",notes:"1 of 4 owners. Other 3 are NEW"},
+  // ===== CHICAGO ORIGINAL PIPELINE (Buildings.csv + Call-list 1.0/2.0) =====
+  // DM-FOUND — Right Asset Manager identified and engaged
+  {building_name:"Marquee at Block 37",city:"Chicago",owner:"Morguard Corporation",owner_2:"CIM Group",pm:"Morguard Management",address:"25 W Randolph St",units:614,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:52,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Gary Stern (US AM) — 'I'm the US Asset Manager. How can I help?' Kevin Paustian also engaged. 12 2BR + 1 3BR"},
+  {building_name:"Echelon Chicago",city:"Chicago",owner:"Morguard Corporation",owner_2:"",pm:"Morguard Management",address:"353 N Desplaines St",units:351,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:52,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Kevin Paustian (AM) — soft objection: 95% occ. Door open. 5 2BR"},
+  {building_name:"Alta",city:"Chicago",owner:"Morguard Corporation",owner_2:"",pm:"Morguard Management",address:"555 W Kinzie St",units:848,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:52,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Gary Stern + Kevin Paustian. Morguard shared pool. 43 avail"},
+  {building_name:"Coast at Lakeshore East",city:"Chicago",owner:"Morguard Corporation",owner_2:"",pm:"Morguard Management",address:"345 E Wacker Dr",units:515,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:52,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Gary Stern + Kevin Paustian. Morguard shared pool. 22 avail"},
+  {building_name:"Parq Fulton",city:"Chicago",owner:"Marquette Companies",owner_2:"",pm:"Marquette Management",address:"1400 W Randolph St",units:278,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:5,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Cheryl T. Charnas (SVP AM) — WARMEST LEAD. 'That would be me.' Requested materials. 4 3BR"},
+  {building_name:"The Thompson at Fulton Market",city:"Chicago",owner:"Marquette Companies",owner_2:"",pm:"Marquette Management",address:"150 N Ashland Ave",units:210,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:5,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Cheryl T. Charnas (SVP AM). Same Marquette pool."},
+  {building_name:"Evo Union Park",city:"Chicago",owner:"Marquette Companies",owner_2:"Pacific Life Insurance",pm:"Marquette Companies",address:"1454 W Randolph St",units:242,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:5,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Cheryl T. Charnas (SVP AM). Same Marquette pool."},
+  {building_name:"Cascade",city:"Chicago",owner:"Magellan Development",owner_2:"Lendlease",pm:"Magellan Property Mgmt",address:"455 E Waterside Dr",units:503,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:23,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Jordan Roehl (Assoc AM, Lendlease) — 'That would be me. What can I do for you?' Cell: 312-874-0074. 5 2BR"},
+  {building_name:"640 North Wells",city:"Chicago",owner:"GID",owner_2:"",pm:"Windsor Communities",address:"640 N Wells St",units:250,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:35,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Winston McBurnett (Asst VP AM) — 'Yes, that is me, thanks!' 5 2BR"},
+  {building_name:"Moment",city:"Chicago",owner:"GID",owner_2:"",pm:"Windsor Communities",address:"545 N McClurg Ct",units:490,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:35,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Winston McBurnett (Asst VP AM). GID shared pool. 22 avail"},
+  {building_name:"Flair Tower",city:"Chicago",owner:"GID",owner_2:"",pm:"Windsor Communities",address:"222 W Erie St",units:198,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:35,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Winston McBurnett (Asst VP AM). GID shared pool. 11 avail"},
+  {building_name:"Millie On Michigan",city:"Chicago",owner:"Kayne Anderson RE",owner_2:"CEDARst Companies",pm:"CEDARst Companies",address:"300 N Michigan Ave",units:289,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:12,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Griffin Epping (Director, CEDARst). 5 2BR"},
+  {building_name:"The Ardus",city:"Chicago",owner:"CEDARst Companies (Flats)",owner_2:"",pm:"CEDARst Companies",address:"676 N La Salle Dr",units:149,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:12,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Griffin Epping (Director). 1 duplex 3BR"},
+  {building_name:"Cassidy on Canal",city:"Chicago",owner:"Diversified RE Capital",owner_2:"The Habitat",pm:"The Habitat Company",address:"350 N Canal St",units:343,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:5,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Ermin Husic (AM, The Habitat) — referred. 6 2BR incl 1 PH"},
+  {building_name:"TRIO Apartments",city:"Chicago",owner:"Abacus Capital Group",owner_2:"",pm:"Village Green",address:"670 W Wayman St",units:100,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:13,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Jonathan McClintock (Dir AM). 1 3BR (avail end Feb)"},
+  {building_name:"One Bennett Park",city:"Chicago",owner:"Related Midwest",owner_2:"",pm:"Related Midwest",address:"514 N Peshtigo Ct",units:348,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:16,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Jack Keane (AM) — referred. Related Midwest pool. 12 avail"},
+  {building_name:"500 Lake Shore Drive",city:"Chicago",owner:"Related Midwest",owner_2:"",pm:"Related Management",address:"500 N Lake Shore Dr",units:500,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:16,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Jack Keane (AM). Related shared pool. 14 avail"},
+  {building_name:"Landmark West Loop",city:"Chicago",owner:"Related Midwest",owner_2:"",pm:"Willow Bridge",address:"1035 W Van Buren St",units:300,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:16,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Jack Keane (AM). Related shared pool. 12 avail"},
+  {building_name:"The Row Fulton Market",city:"Chicago",owner:"Related Midwest",owner_2:"",pm:"Related Management",address:"164 N Peoria St",units:300,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:16,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Jack Keane (AM). Related shared pool. 11 avail"},
+  {building_name:"Coppia",city:"Chicago",owner:"The Pizzuti Companies",owner_2:"",pm:"Village Green",address:"1101 W Van Buren St",units:298,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:9,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Nichole Hilliard (Manager Property). 3 2BR + 1 3BR"},
+  {building_name:"Mondial River West",city:"Chicago",owner:"The Slosburg Company",owner_2:"",pm:"Exposition Residential",address:"910 W Huron St",units:141,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:13,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Jacob Slosburg (President) — 'Send info, I'll get it to the correct team member.' Works with BlueGround."},
+  {building_name:"Union West",city:"Chicago",owner:"Tishman Speyer",owner_2:"",pm:"Greystar",address:"939 W Washington Blvd",units:358,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:31,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Daniel Flynn (AM Sr Assoc) + Shilp Shah (Sr Dir AM). Some contacts deny owning it. 2 3BR"},
+  {building_name:"One Superior Place",city:"Chicago",owner:"Hartz Mountain Industries",owner_2:"",pm:"Greystar",address:"1 W Superior St",units:809,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:4,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Mark Killough (SVP) — 'we don't need your help'. Soft decline. 31 avail"},
+  {building_name:"The Shoreham & The Tides",city:"Chicago",owner:"Waterton",owner_2:"",pm:"Waterton Residential",address:"360 E South Water St",units:1156,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:20,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Patrick Mcgarry (VP AM) — STR objection: 'don't allow short term usage at our assets.' 59 avail"},
+  {building_name:"The Mason",city:"Chicago",owner:"Waterton",owner_2:"",pm:"Waterton Residential",address:"180 N Ada St",units:263,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:20,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Patrick Mcgarry (VP AM). Waterton shared pool. STR objection. 16 avail"},
+  {building_name:"North Harbor Tower",city:"Chicago",owner:"Waterton",owner_2:"",pm:"Waterton Residential",address:"175 N Harbor Dr",units:600,pp:null,stage:"DM-FOUND",p1:0,p2:0,p3:0,p4:0,total:20,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"DM: Patrick Mcgarry (VP AM). Waterton shared pool. STR objection. 25 avail"},
+  // ENROLLED — Seq 2 contacts enrolled, no DM identified yet
+  {building_name:"Atwater Apartments",city:"Chicago",owner:"Blackrock",owner_2:"",pm:"Bozzuto",address:"355 E Ohio St",units:484,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:86,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"55 enrolled Seq 2. 11 2BR + 2 3BR. 38 avail"},
+  {building_name:"Aston Chicago",city:"Chicago",owner:"Edge Principal Advisors",owner_2:"",pm:"Greystar",address:"200 E Illinois St",units:325,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:10,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"10 enrolled Seq 2. 5 2BR + 2 3BR. 24 avail"},
+  {building_name:"Flora",city:"Chicago",owner:"High Street Residential",owner_2:"Trammell Crow",pm:"Greystar",address:"1114 W Carroll Ave",units:368,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:8,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"7 enrolled Seq 2. 2 3BR + 3 2BR. 19 avail"},
+  {building_name:"The Streeter",city:"Chicago",owner:"STRS Ohio",owner_2:"",pm:"STRS Ohio",address:"Chicago",units:481,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:21,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"19 enrolled Seq 2. 7 2BR + 2 3BR. 31 avail"},
+  {building_name:"Axis Apartments",city:"Chicago",owner:"Group Fox",owner_2:"",pm:"Group Fox Property Mgmt",address:"441 E Erie St",units:625,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:18,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"17 enrolled (Group Fox pool). Replacing Sonder: reviewing 16 RFPs for 101 former Sonder units. 35 avail"},
+  {building_name:"Lofts At River East",city:"Chicago",owner:"Group Fox",owner_2:"",pm:"Group Fox Property Mgmt",address:"445 E Illinois St",units:285,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:18,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"Group Fox shared pool. 20 avail"},
+  {building_name:"OneEleven",city:"Chicago",owner:"Heitman",owner_2:"",pm:"Bozzuto",address:"111 W Wacker Dr",units:505,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:44,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"43 enrolled Seq 2. Some deny owning it. 18 avail"},
+  {building_name:"180 North Jefferson",city:"Chicago",owner:"Heitman",owner_2:"",pm:"Slosburg Company",address:"180 N Jefferson St",units:274,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:44,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"Heitman shared pool. 'Pretty sure we don't own it' — stale data? 6 avail"},
+  {building_name:"Stead 220",city:"Chicago",owner:"TLC Management",owner_2:"",pm:"Jones Lang LaSalle",address:"220 N Ada St",units:308,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:28,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"CRG 20 + QuadReal 16 + Shapack 4 enrolled. HIGH pain. 47 avail"},
+  {building_name:"Gallery on Wells",city:"Chicago",owner:"Magellan Development",owner_2:"Wanxiang/Strand/NexPoint",pm:"Magellan Property Mgmt",address:"637 N Wells St",units:445,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:33,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"Multiple owners. Strand 12 + Magellan 15 + Wanxiang 2 enrolled. 25 avail"},
+  {building_name:"Chestnut Tower",city:"Chicago",owner:"LaSalle Investment Mgmt",owner_2:"",pm:"Willow Bridge",address:"121 W Chestnut St",units:230,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:24,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"LaSalle 17 enrolled. Part of Canada team noted. 15 avail"},
+  {building_name:"Aqua Tower",city:"Chicago",owner:"Ares Commercial RE",owner_2:"",pm:"Magellan Property Mgmt",address:"N Columbus Dr",units:479,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:10,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"Ares 8 enrolled. 4 2BR. 35 avail"},
+  {building_name:"AMLI 808",city:"Chicago",owner:"AMLI Residential",owner_2:"",pm:"AMLI Residential",address:"808 N Wells St",units:318,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:15,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"14 enrolled Seq 2. Corporate housing dept confirmed (Daniel Gladden). 18 avail"},
+  {building_name:"AMLI West Loop",city:"Chicago",owner:"AMLI Residential",owner_2:"",pm:"AMLI Residential",address:"205 S Peoria St",units:275,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:15,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"AMLI shared pool. 26 avail"},
+  {building_name:"Amli River North",city:"Chicago",owner:"AMLI Residential",owner_2:"",pm:"AMLI Residential",address:"71 W Hubbard St",units:409,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:15,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"AMLI shared pool. 31 avail"},
+  {building_name:"Lake Shore Plaza",city:"Chicago",owner:"Related Companies",owner_2:"",pm:"Related Management",address:"445 E Ohio St",units:567,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:16,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"Related shared pool. 20 avail"},
+  {building_name:"215 West Apartments",city:"Chicago",owner:"Jupiter Realty Company",owner_2:"",pm:"Willow Bridge",address:"215 W Washington St",units:387,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:1,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"1 enrolled Seq 2. Wrong number noted. 19 avail"},
+  {building_name:"Catalyst",city:"Chicago",owner:"The Green Cities Company",owner_2:"",pm:"Greystar",address:"123 N Desplaines St",units:223,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:3,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"Green Cities 2 enrolled. 9 avail"},
+  {building_name:"Lake and Wells",city:"Chicago",owner:"The Green Cities Company",owner_2:"",pm:"Greystar",address:"210 N Wells St",units:329,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:3,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"Green Cities shared pool. 20 avail"},
+  {building_name:"Neveseno",city:"Chicago",owner:"Zalcantar LLC (CMK)",owner_2:"",pm:"Greystar",address:"1717 S Michigan Ave",units:149,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:4,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"CMK/Zalcantar 3 enrolled. 1 3BR + 1 4BR. 5 avail"},
+  {building_name:"727 West Madison",city:"Chicago",owner:"Pontegadea",owner_2:"",pm:"Bozzuto",address:"727 W Madison St",units:492,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:7,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"1 enrolled Seq 2. 29 avail"},
+  {building_name:"Exhibit on Superior",city:"Chicago",owner:"Magellan Development",owner_2:"MAC Management",pm:"Magellan/MAC",address:"165 W Superior St",units:303,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:17,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"Magellan 15 + MAC 1 enrolled. 15 avail"},
+  {building_name:"One East Delaware",city:"Chicago",owner:"Friedkin Property Group",owner_2:"",pm:"Willow Bridge",address:"1 E Delaware Pl",units:304,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:4,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 23 avail. Up to 1 month free"},
+  {building_name:"Gateway West Loop",city:"Chicago",owner:"Broadshore Capital Partners",owner_2:"",pm:"Willow Bridge",address:"11 S Green St",units:168,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:24,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"LaSalle 17 enrolled (shared pool with Chestnut Tower). 10 avail. $500 concession on 2BR"},
+  // DNC — Company-level blocks
+  {building_name:"Arrive Streeterville",city:"Chicago",owner:"FPA Multifamily",owner_2:"",pm:"Trinity Property",address:"333 E Ontario St",units:1061,pp:null,stage:"DNC",p1:0,p2:0,p3:0,p4:0,total:17,sequence:"Seq 2",hubspot:"Excluded",batch:"Call-list 1.0/2.0",notes:"FPA CLOSED. CIO Daniel Kaplan hard declined. 69 avail"},
+  {building_name:"Arrive LEX",city:"Chicago",owner:"FPA Multifamily",owner_2:"",pm:"Trinity Property",address:"2138 S Indiana Ave",units:332,pp:null,stage:"DNC",p1:0,p2:0,p3:0,p4:0,total:17,sequence:"Seq 2",hubspot:"Excluded",batch:"Call-list 1.0/2.0",notes:"FPA CLOSED. 8 avail"},
+  {building_name:"North Water",city:"Chicago",owner:"FPA Multifamily",owner_2:"",pm:"Trinity Property",address:"340 E North Water St",units:399,pp:null,stage:"DNC",p1:0,p2:0,p3:0,p4:0,total:17,sequence:"Seq 2",hubspot:"Excluded",batch:"Call-list 1.0/2.0",notes:"FPA CLOSED. 15 avail"},
+  {building_name:"The Seneca",city:"Chicago",owner:"FPA Multifamily",owner_2:"",pm:"Trinity Property",address:"200 E Chestnut St",units:268,pp:null,stage:"DNC",p1:0,p2:0,p3:0,p4:0,total:17,sequence:"Seq 2",hubspot:"Excluded",batch:"Call-list 1.0/2.0",notes:"FPA CLOSED. 1 month free. 26 avail"},
+  {building_name:"West77 Apartments",city:"Chicago",owner:"FPA Multifamily",owner_2:"",pm:"Red Tail Residential",address:"77 W Huron St",units:304,pp:null,stage:"DNC",p1:0,p2:0,p3:0,p4:0,total:17,sequence:"",hubspot:"Excluded",batch:"Call-list 1.0/2.0",notes:"FPA CLOSED. 10 avail"},
+  {building_name:"Cortland River North",city:"Chicago",owner:"Cortland Partners",owner_2:"",pm:"Cortland Partners",address:"220 W Illinois St",units:188,pp:null,stage:"DNC",p1:0,p2:0,p3:0,p4:0,total:21,sequence:"Seq 2",hubspot:"Excluded",batch:"Call-list 1.0/2.0",notes:"DNC — Tiffany Barnett (MD): 'please refrain from emailing others in the organization.' 6 avail"},
+  {building_name:"State & Chestnut",city:"Chicago",owner:"Newcastle Investors",owner_2:"",pm:"Newcastle Investors",address:"845 N State St",units:367,pp:null,stage:"DNC",p1:0,p2:0,p3:0,p4:0,total:4,sequence:"Seq 2",hubspot:"Excluded",batch:"Call-list 1.0/2.0",notes:"DNC — Chris Kellas: debt covenants restrict flexible-term leasing. 15 avail"},
+  // STALE DATA — Confirmed wrong ownership
+  {building_name:"Parc Huron",city:"Chicago",owner:"L&B Realty Advisors",owner_2:"APFC",pm:"Bozzuto",address:"469 W Huron St",units:221,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:24,sequence:"Seq 2",hubspot:"",batch:"Call-list 1.0/2.0",notes:"STALE — L&B sold April 2019. 'Try Heitman.' 24 contacts all unqualified"},
+  {building_name:"State and Grand",city:"Chicago",owner:"Invesco Real Estate",owner_2:"",pm:"Willow Bridge",address:"505 N State St",units:145,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:18,sequence:"Seq 2",hubspot:"",batch:"Call-list 1.0/2.0",notes:"STALE — 'Invesco does not own any properties in Chicago.' 18 contacts all unqualified"},
+  // ALREADY CONTACTED — In system, 0 Seq 2 enrollment or no meaningful activity
+  {building_name:"One Chicago",city:"Chicago",owner:"JDL Development",owner_2:"",pm:"JDL Development",address:"14 W Superior St",units:735,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:7,sequence:"Seq 2",hubspot:"",batch:"Call-list 1.0/2.0",notes:"JDL pool. COO: 'none of my business.' 24 avail"},
+  {building_name:"Parker Fulton Market",city:"Chicago",owner:"JDL Development",owner_2:"",pm:"Willow Bridge",address:"730 W Couch Pl",units:227,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:7,sequence:"Seq 2",hubspot:"",batch:"Call-list 1.0/2.0",notes:"JDL pool. 2 3BR + 2 2BR. 16 avail"},
+  {building_name:"920 N Wells",city:"Chicago",owner:"JDL Development",owner_2:"",pm:"Willow Bridge",address:"920 N Wells St",units:238,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:7,sequence:"Seq 2",hubspot:"",batch:"Call-list 1.0/2.0",notes:"JDL pool. 17 avail"},
+  {building_name:"One Six Six",city:"Chicago",owner:"Greystar",owner_2:"",pm:"Greystar",address:"166 N Aberdeen St",units:224,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:36,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"36 contacts, 0 enrolled. 18 avail"},
+  {building_name:"369 Grand by Onni",city:"Chicago",owner:"Onni Grand LP",owner_2:"",pm:"Onni Grand LP",address:"369 W Grand Ave",units:356,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:41,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"Onni pool (41 contacts). 0 enrolled. 10 avail"},
+  {building_name:"The Hudson",city:"Chicago",owner:"Onni Group",owner_2:"",pm:"Onni Group",address:"750 N Hudson Ave",units:240,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:41,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"Onni pool. 0 enrolled. 6 avail"},
+  {building_name:"465 North Park",city:"Chicago",owner:"MetLife Investment Mgmt",owner_2:"",pm:"Bozzuto",address:"465 N Park Dr",units:444,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:150,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"150 MetLife contacts, 0 enrolled. 33 avail"},
+  {building_name:"Env Chicago",city:"Chicago",owner:"MetLife Investment Mgmt",owner_2:"",pm:"Bozzuto",address:"161 W Kinzie St",units:249,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:150,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"MetLife pool. 0 enrolled. 7 avail"},
+  {building_name:"MILA Apartments",city:"Chicago",owner:"The John Buck Company",owner_2:"",pm:"The John Buck Company",address:"201 N Garland Ct",units:402,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:7,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 4 weeks rent free. 35 avail"},
+  {building_name:"8 East Huron",city:"Chicago",owner:"Thesis Investment Group",owner_2:"",pm:"Greystar",address:"8 E Huron St",units:102,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:3,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 1 month free. 8 avail"},
+  {building_name:"Porte",city:"Chicago",owner:"Lendlease",owner_2:"The John Buck Co / Intercontinental",pm:"Willow Bridge",address:"855 W Madison St",units:586,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:23,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"Lendlease 18 enrolled. Jordan Roehl is DM for Cascade but may cover Porte. 28 avail"},
+  {building_name:"Cityfront Place",city:"Chicago",owner:"Strategic Properties / Mirae Asset",owner_2:"",pm:"Strategic Properties",address:"400 N McClurg Ct",units:482,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:29,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 22 avail"},
+  {building_name:"Hugo River North",city:"Chicago",owner:"LG Group",owner_2:"",pm:"Cagan Management",address:"751 N Hudson Ave",units:227,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:7,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 1 month free on 1BR. 13 avail"},
+  {building_name:"Westerly (Fifield)",city:"Chicago",owner:"Fifield",owner_2:"Washington Capital Mgmt",pm:"Bozzuto",address:"740 N Aberdeen St",units:188,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:4,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"Fifield 0 enrolled. 14 avail. NOTE: Same building as 'The Westerly' in Enrich 3.0 (Range Group = different owner attribution)"},
+  {building_name:"The Van Buren",city:"Chicago",owner:"Washington Capital Mgmt",owner_2:"",pm:"Greystar",address:"808 W Van Buren St",units:148,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:4,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 1st month free select homes. 11 avail"},
+  {building_name:"Circa 922",city:"Chicago",owner:"Atlantic Residential",owner_2:"Focus Development",pm:"Willow Bridge",address:"922 W Washington Blvd",units:149,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:10,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 8 avail"},
+  {building_name:"750 N Rush Apartments",city:"Chicago",owner:"PPM Apartments",owner_2:"",pm:"PPM Apartments",address:"750 N Rush St",units:221,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:16,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 10 avail"},
+  {building_name:"Two West Delaware",city:"Chicago",owner:"Dart Interests",owner_2:"",pm:"Golub & Company",address:"2 W Delaware Pl",units:185,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 contacts in call-list. 6 avail"},
+  {building_name:"Gramercy Row",city:"Chicago",owner:"TLC Management",owner_2:"",pm:"TLC Management",address:"660 N Dearborn St",units:87,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:7,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 7 avail"},
+  {building_name:"Niche 905",city:"Chicago",owner:"Intercontinental RE",owner_2:"Ascend RE Group",pm:"Willow Bridge",address:"905 N Orleans St",units:202,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:24,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"Intercontinental 0 enrolled. 9 avail"},
+  {building_name:"The Saint Grand",city:"Chicago",owner:"Mavrek Development",owner_2:"",pm:"Luxury Living Chicago",address:"218 E Grand Ave",units:248,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:5,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 11 avail"},
+  {building_name:"Eight O Five",city:"Chicago",owner:"Berkshire Residential",owner_2:"",pm:"Berkshire Residential",address:"805 N LaSalle Dr",units:292,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:38,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 12 avail"},
+  {building_name:"Marlowe",city:"Chicago",owner:"Virtu Investments",owner_2:"",pm:"North Coast Living",address:"169 W Huron St",units:176,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:11,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 7 avail"},
+  {building_name:"Monroe Aberdeen Place",city:"Chicago",owner:"LRE Management LLC",owner_2:"",pm:"Marquette Management",address:"1050 W Monroe St",units:120,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:7,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 4 avail"},
+  {building_name:"The Chatelaine",city:"Chicago",owner:"Group Fox",owner_2:"",pm:"Group Fox Property Mgmt",address:"215 E Chestnut St",units:78,pp:null,stage:"ENROLLED",p1:0,p2:0,p3:0,p4:0,total:18,sequence:"Seq 2",hubspot:"Enrolled",batch:"Call-list 1.0/2.0",notes:"Group Fox shared pool. 2 avail"},
+  {building_name:"River West Lofts",city:"Chicago",owner:"Wesley Realty Group",owner_2:"",pm:"Wesley Realty Group",address:"925 W Huron St",units:164,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:5,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 4 avail"},
+  {building_name:"The Leo",city:"Chicago",owner:"Vista Property Group",owner_2:"",pm:"Luxury Living Chicago",address:"741 N Wells St",units:168,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:3,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 4 avail"},
+  {building_name:"3Eleven",city:"Chicago",owner:"Vista Property",owner_2:"",pm:"Magellan",address:"311 W Illinois St",units:245,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:3,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 12 avail"},
+  {building_name:"25 E. Delaware",city:"Chicago",owner:"BJB Properties",owner_2:"",pm:"BJB Properties",address:"25 E Delaware Pl",units:145,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:3,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 2 avail"},
+  {building_name:"Marina City",city:"Chicago",owner:"Sperry Equities",owner_2:"Pebblebrook / CoStar",pm:"Sperry Equities",address:"300 N State St",units:896,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:27,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"DO NOT PITCH — Condos. 3 avail"},
+  {building_name:"The Fordham",city:"Chicago",owner:"The Fordham Company",owner_2:"",pm:"The Fordham Company",address:"25 E Superior St",units:244,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:5,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"DO NOT PITCH — Condos. 4 avail"},
+  {building_name:"EMME",city:"Chicago",owner:"Hines (HGIT)",owner_2:"",pm:"Willowick Residential",address:"165 N Desplaines St",units:199,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:8,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"Hines pool. 0 enrolled. $1000 credit. 13 avail"},
+  {building_name:"Seven 10 West",city:"Chicago",owner:"Steel City Management",owner_2:"Outlook Management",pm:"Luxury Living Chicago",address:"710 W Grand Ave",units:105,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:7,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 7 avail"},
+];
+
+// DNC companies
+const DNC_COMPANIES = ['FPA Multifamily','Cortland','Cortland Partners','Newcastle Ltd','Newcastle Investors'];
+
+// ============================================================
+// RENDERING
+// ============================================================
+
+function stageBadge(stage) {
+  const map = {
+    'APOLLO-READY': ['Apollo Ready','badge-apollo'],
+    'CONTACTS-SCORED': ['Contacts Scored','badge-scored'],
+    'SEQUENCES-WRITTEN': ['Sequences Written','badge-sequences'],
+    'ENROLLED': ['Enrolled','badge-enrolled'],
+    'REPLIED': ['Replied','badge-replied'],
+    'DM-FOUND': ['DM Found','badge-dm'],
+    'MEETING': ['Meeting','badge-meeting'],
+    'SIGNED': ['Signed','badge-signed'],
+    'DNC': ['DNC','badge-dnc'],
+    'ALREADY-CONTACTED': ['Already Contacted','badge-contacted'],
+    'FLAGGED': ['Flagged','badge-flagged'],
+  };
+  const [label, cls] = map[stage] || [stage, ''];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function tierBar(b) {
+  const t = b.p1 + b.p2 + b.p3 + b.p4;
+  if (t === 0) return '<span style="color:var(--text2);font-size:11px;">—</span>';
+  const pct = v => (v / t * 100).toFixed(0);
+  let html = '<div class="tier-bar">';
+  if (b.p1) html += `<div class="tier-p1" style="width:${pct(b.p1)}%" title="P1: ${b.p1}">P1</div>`;
+  if (b.p2) html += `<div class="tier-p2" style="width:${pct(b.p2)}%" title="P2: ${b.p2}">P2</div>`;
+  if (b.p3) html += `<div class="tier-p3" style="width:${pct(b.p3)}%" title="P3: ${b.p3}">P3</div>`;
+  if (b.p4) html += `<div class="tier-p4" style="width:${pct(b.p4)}%" title="P4: ${b.p4}">P4</div>`;
+  html += '</div>';
+  return html;
+}
+
+function noteStyle(n) {
+  if (!n) return '';
+  if (n.includes('DNC') || n.includes('CLOSED')) return 'note-dnc';
+  if (n.includes('MISSING') || n.includes('NEEDED') || n.includes('false positive') || n.includes('Fuzzy')) return 'note-flag';
+  return '';
+}
+
+// State
+let cityFilter = 'all';
+let stageFilter = 'all';
+let searchTerm = '';
+
+function getFiltered() {
+  return buildings.filter(b => {
+    if (cityFilter !== 'all' && b.city !== cityFilter) return false;
+    if (stageFilter === 'active' && ['DNC','ALREADY-CONTACTED','FLAGGED'].includes(b.stage)) return false;
+    if (stageFilter !== 'all' && stageFilter !== 'active' && b.stage !== stageFilter) return false;
+    if (searchTerm) {
+      const s = searchTerm.toLowerCase();
+      const haystack = [b.building_name, b.owner, b.owner_2, b.pm, b.city, b.batch, b.notes].join(' ').toLowerCase();
+      if (!haystack.includes(s)) return false;
+    }
+    return true;
+  });
+}
+
+// KPIs — updates based on active filters
+function renderKPIs() {
+  const filtered = getFiltered();
+  const all = buildings;
+  const isFiltered = cityFilter !== 'all' || stageFilter !== 'all' || searchTerm;
+  const dataset = isFiltered ? filtered : all;
+  const active = dataset.filter(b => !['DNC','ALREADY-CONTACTED','FLAGGED'].includes(b.stage));
+  const cities = [...new Set(dataset.map(b => b.city))];
+  const totalContacts = dataset.reduce((s, b) => s + (b.total || 0), 0);
+  const p1Total = dataset.reduce((s, b) => s + b.p1, 0);
+  const dmFound = dataset.filter(b => b.stage === 'DM-FOUND').length;
+  const enrolled = dataset.filter(b => b.stage === 'ENROLLED').length;
+  const sequencesWritten = dataset.filter(b => b.stage === 'SEQUENCES-WRITTEN').length;
+  const apolloReady = dataset.filter(b => b.stage === 'APOLLO-READY').length;
+
+  const filterNote = isFiltered ? ' (filtered)' : '';
+  const cityLabel = cities.length === 1 ? cities[0] : `${cities.length} cities`;
+
+  const kpis = [
+    { value: active.length, label: 'Active Buildings', sub: `of ${dataset.length} total · ${cityLabel}${filterNote}` },
+    { value: dmFound, label: 'DM Found', sub: 'decision makers identified' },
+    { value: enrolled + sequencesWritten, label: 'In Sequences', sub: `${enrolled} enrolled · ${sequencesWritten} written` },
+    { value: totalContacts, label: 'Total Contacts', sub: `${p1Total} P1 (direct AM)` },
+    { value: apolloReady, label: 'Apollo Ready', sub: 'awaiting contact pull' },
+    { value: dataset.filter(b => b.stage === 'DNC').length, label: 'DNC', sub: 'blocked companies' },
+  ];
+
+  document.getElementById('kpi-strip').innerHTML = kpis.map(k =>
+    `<div class="kpi"><div class="kpi-value">${k.value}</div><div class="kpi-label">${k.label}</div><div class="kpi-sub">${k.sub}</div></div>`
+  ).join('');
+}
+
+// Buildings table
+function renderBuildings() {
+  const filtered = getFiltered();
+  const tbody = document.getElementById('buildings-tbody');
+  tbody.innerHTML = filtered.map(b => `
+    <tr>
+      <td><strong>${b.building_name}</strong></td>
+      <td>${b.city}</td>
+      <td>${b.owner}${b.owner_2 ? '<br><span style="color:var(--text2);font-size:11px;">+ ' + b.owner_2 + '</span>' : ''}</td>
+      <td>${b.units || '—'}</td>
+      <td>${b.pp != null ? b.pp : '<span class="note-flag">—</span>'}</td>
+      <td>${stageBadge(b.stage)}</td>
+      <td>${b.total || 0}</td>
+      <td>${tierBar(b)}</td>
+      <td style="font-size:11px;color:var(--text2);">${b.batch}</td>
+      <td style="font-size:11px;" class="${noteStyle(b.notes)}">${b.notes || ''}</td>
+    </tr>
+  `).join('');
+  document.getElementById('no-results').style.display = filtered.length ? 'none' : 'block';
+}
+
+// Companies
+function renderCompanies() {
+  const filtered = getFiltered();
+  const companyMap = {};
+  filtered.forEach(b => {
+    const key = b.owner;
+    if (!companyMap[key]) companyMap[key] = { name: key, buildings: [], cities: new Set(), total: 0, p1: 0, p2: 0, p3: 0, p4: 0, dnc: false };
+    companyMap[key].buildings.push(b);
+    companyMap[key].cities.add(b.city);
+    companyMap[key].total += b.total || 0;
+    companyMap[key].p1 += b.p1;
+    companyMap[key].p2 += b.p2;
+    companyMap[key].p3 += b.p3;
+    companyMap[key].p4 += b.p4;
+    if (DNC_COMPANIES.some(d => key.includes(d))) companyMap[key].dnc = true;
+  });
+
+  const companies = Object.values(companyMap).sort((a, b) => b.total - a.total);
+  const grid = document.getElementById('companies-grid');
+  grid.innerHTML = companies.map(c => `
+    <div class="company-card ${c.dnc ? 'dnc' : ''}">
+      <div class="company-name">${c.name} ${c.dnc ? '<span class="dnc-badge">DNC</span>' : ''}</div>
+      <div class="company-meta">${[...c.cities].join(', ')} · ${c.total} contacts · ${c.buildings.length} building${c.buildings.length > 1 ? 's' : ''}</div>
+      ${c.total > 0 ? tierBar({p1:c.p1,p2:c.p2,p3:c.p3,p4:c.p4}) : ''}
+      <ul class="company-buildings">
+        ${c.buildings.map(b => `
+          <li>
+            <span>${b.building_name} <span style="color:var(--text2);font-size:11px;">${b.units ? b.units + 'u' : ''}</span></span>
+            ${stageBadge(b.stage)}
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+  `).join('');
+}
+
+// Pipeline funnel
+function renderPipeline() {
+  const stageOrder = ['APOLLO-READY','CONTACTS-SCORED','SEQUENCES-WRITTEN','ENROLLED','REPLIED','DM-FOUND','MEETING','SIGNED'];
+  const stageColors = {
+    'APOLLO-READY': 'var(--blue)',
+    'CONTACTS-SCORED': 'var(--green)',
+    'SEQUENCES-WRITTEN': 'var(--accent)',
+    'ENROLLED': 'var(--orange)',
+    'REPLIED': 'var(--pink)',
+    'DM-FOUND': 'var(--green)',
+    'MEETING': 'var(--yellow)',
+    'SIGNED': 'var(--green)',
+  };
+  const stageLabels = {
+    'APOLLO-READY': 'Apollo Ready',
+    'CONTACTS-SCORED': 'Contacts Scored',
+    'SEQUENCES-WRITTEN': 'Sequences Written',
+    'ENROLLED': 'Enrolled in HubSpot',
+    'REPLIED': 'Replied',
+    'DM-FOUND': 'DM Found',
+    'MEETING': 'Meeting Booked',
+    'SIGNED': 'Signed',
+  };
+
+  const cities = cityFilter === 'all' ? ['Houston', 'Chicago'] : [cityFilter];
+  const container = document.getElementById('funnel-container');
+
+  container.innerHTML = cities.map(city => {
+    const cityBuildings = buildings.filter(b => b.city === city && !['DNC','ALREADY-CONTACTED','FLAGGED'].includes(b.stage));
+    const maxCount = Math.max(...stageOrder.map(s => cityBuildings.filter(b => b.stage === s).length), 1);
+
+    return `
+      <div class="funnel-city">
+        <h3>${city}</h3>
+        ${stageOrder.map(s => {
+          const count = cityBuildings.filter(b => b.stage === s).length;
+          const width = Math.max(count / maxCount * 100, count > 0 ? 10 : 2);
+          return `
+            <div class="funnel-bar">
+              <div class="funnel-label">${stageLabels[s]}</div>
+              <div class="funnel-fill" style="width:${width}%;background:${stageColors[s]};">${count}</div>
+            </div>
+          `;
+        }).join('')}
+        <div style="margin-top:16px;font-size:12px;color:var(--text2);">
+          Also: ${buildings.filter(b => b.city === city && b.stage === 'ALREADY-CONTACTED').length} already contacted,
+          ${buildings.filter(b => b.city === city && b.stage === 'DNC').length} DNC,
+          ${buildings.filter(b => b.city === city && b.stage === 'FLAGGED').length} flagged
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Tier breakdown
+let tierChart = null;
+function renderTiers() {
+  const totals = { p1: 0, p2: 0, p3: 0, p4: 0 };
+  const filtered = getFiltered();
+  filtered.forEach(b => { totals.p1 += b.p1; totals.p2 += b.p2; totals.p3 += b.p3; totals.p4 += b.p4; });
+  const grand = totals.p1 + totals.p2 + totals.p3 + totals.p4;
+
+  document.getElementById('tier-summary').innerHTML = [
+    { label: 'P1 — Direct AM', value: totals.p1, color: 'var(--green)' },
+    { label: 'P2 — C-Suite', value: totals.p2, color: 'var(--blue)' },
+    { label: 'P3 — Keyword Match', value: totals.p3, color: 'var(--yellow)' },
+    { label: 'P4 — Extended', value: totals.p4, color: 'var(--gray)' },
+    { label: 'Total Scored', value: grand, color: 'var(--text)' },
+  ].map(t => `
+    <div class="tier-card">
+      <div class="tier-card-value" style="color:${t.color}">${t.value}</div>
+      <div class="tier-card-label">${t.label}</div>
+    </div>
+  `).join('');
+
+  // Chart
+  const ctx = document.getElementById('tier-chart').getContext('2d');
+  if (tierChart) tierChart.destroy();
+  tierChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['P1 — Direct AM', 'P2 — C-Suite', 'P3 — Keyword Match', 'P4 — Extended'],
+      datasets: [{
+        data: [totals.p1, totals.p2, totals.p3, totals.p4],
+        backgroundColor: ['#22c55e', '#3b82f6', '#eab308', '#6b7280'],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#8b8fa3', padding: 16, font: { size: 12 } } }
+      }
+    }
+  });
+
+  // Per-building table
+  const scored = filtered.filter(b => (b.p1 + b.p2 + b.p3 + b.p4) > 0);
+  document.getElementById('tier-table-tbody').innerHTML = scored.map(b => {
+    const t = b.p1 + b.p2 + b.p3 + b.p4;
+    return `
+      <tr>
+        <td><strong>${b.building_name}</strong> <span style="color:var(--text2);font-size:11px;">(${b.city})</span></td>
+        <td style="color:var(--green)">${b.p1 || '—'}</td>
+        <td style="color:var(--blue)">${b.p2 || '—'}</td>
+        <td style="color:var(--yellow)">${b.p3 || '—'}</td>
+        <td style="color:var(--gray)">${b.p4 || '—'}</td>
+        <td><strong>${t}</strong></td>
+        <td>${tierBar(b)}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderAll() {
+  renderKPIs();
+  renderBuildings();
+  renderCompanies();
+  renderPipeline();
+  renderTiers();
+}
+
+// ============================================================
+// EVENT HANDLERS
+// ============================================================
+
+// Search
+document.getElementById('search').addEventListener('input', e => {
+  searchTerm = e.target.value;
+  renderAll();
+});
+
+// City filter
+document.querySelectorAll('[data-city]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-city]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    cityFilter = btn.dataset.city;
+    renderAll();
+  });
+});
+
+// Stage filter
+document.querySelectorAll('[data-stage]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-stage]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    stageFilter = btn.dataset.stage;
+    renderAll();
+  });
+});
+
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'tiers') renderTiers();
+  });
+});
+
+// ============================================================
+// GOOGLE SHEETS LOADER (when USE_SHEET = true)
+// ============================================================
+
+// RFC 4180 CSV parser — handles quoted fields, commas inside quotes, escaped quotes
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    const next = text[i + 1];
+    if (inQuotes) {
+      if (c === '"' && next === '"') { field += '"'; i++; }
+      else if (c === '"') { inQuotes = false; }
+      else { field += c; }
+    } else {
+      if (c === '"') { inQuotes = true; }
+      else if (c === ',') { row.push(field.trim()); field = ''; }
+      else if (c === '\n' || (c === '\r' && next === '\n')) {
+        row.push(field.trim());
+        if (row.length > 1 || row[0] !== '') rows.push(row);
+        row = []; field = '';
+        if (c === '\r') i++;
+      } else { field += c; }
+    }
+  }
+  if (field || row.length > 0) {
+    row.push(field.trim());
+    if (row.length > 1 || row[0] !== '') rows.push(row);
+  }
+  return rows;
+}
+
+// Maps a CSV row (with any column naming convention) to dashboard building object
+function csvRowToBuilding(obj) {
+  return {
+    building_name: obj['building name'] || obj.building_name || '',
+    city: obj.city || '',
+    owner: obj['owner 1'] || obj.owner || '',
+    owner_2: obj['owner 2'] || obj.owner_2 || '',
+    pm: obj['property manager'] || obj.property_manager || obj.pm || '',
+    address: obj.address || '',
+    units: parseInt(obj.units) || null,
+    pp: parseInt(obj['pain point'] || obj.priority || obj.pp_score || obj.pp) || null,
+    stage: (obj.stage || '').toUpperCase(),
+    p1: parseInt(obj.p1) || 0,
+    p2: parseInt(obj.p2) || 0,
+    p3: parseInt(obj.p3) || 0,
+    p4: parseInt(obj.p4) || 0,
+    total: parseInt(obj['total contacts'] || obj.total_contacts || obj.total) || 0,
+    sequence: obj.sequence || '',
+    hubspot: obj.hubspot || '',
+    batch: obj.batch || '',
+    notes: obj.notes || '',
+    shared_with: obj['shared with'] || obj.shared_with || '',
+    neighborhood: obj.neighborhood || '',
+    year_status: obj['year / status'] || obj['year/status'] || obj.year_status || '',
+    owner_3: obj['owner 3'] || '',
+    apollo_owner_1: obj['apollo owner 1'] || '',
+    apollo_owner_2: obj['apollo owner 2'] || '',
+    apollo_owner_3: obj['apollo owner 3'] || '',
+  };
+}
+
+// Fetch CSV via script injection (works from file:// — no CORS issues)
+function fetchSheetCSV(url) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.onload = function() {
+      if (xhr.status === 200 || xhr.status === 0) { // status 0 for file://
+        resolve(xhr.responseText);
+      } else {
+        reject(new Error(`HTTP ${xhr.status}`));
+      }
+    };
+    xhr.onerror = function() {
+      // If XHR fails, try script-based JSONP approach via Google Visualization API
+      const sheetMatch = url.match(/spreadsheets\/d\/e\/([^/]+)/);
+      const gidMatch = url.match(/gid=(\d+)/);
+      if (!sheetMatch) { reject(new Error('Cannot parse sheet URL')); return; }
+      const vizUrl = `https://docs.google.com/spreadsheets/d/e/${sheetMatch[1]}/gviz/tq?tqx=out:csv&gid=${gidMatch ? gidMatch[1] : '0'}`;
+      const xhr2 = new XMLHttpRequest();
+      xhr2.open('GET', vizUrl, true);
+      xhr2.onload = function() { resolve(xhr2.responseText); };
+      xhr2.onerror = function() { reject(new Error('All fetch methods failed')); };
+      xhr2.send();
+    };
+    xhr.send();
+  });
+}
+
+async function loadFromSheet() {
+  if (!USE_SHEET) return;
+  const sheetsWithUrls = CITY_SHEETS.filter(s => s.url);
+  if (sheetsWithUrls.length === 0) return;
+
+  let loadedCount = 0;
+  let errorCount = 0;
+  const allRows = [];
+
+  for (const sheet of sheetsWithUrls) {
+    try {
+      const text = await fetchSheetCSV(sheet.url);
+      const rows = parseCSV(text);
+      if (rows.length < 2) throw new Error('No data rows');
+
+      const headers = rows[0].map(h => h.trim().toLowerCase().replace(/\//g, '/'));
+
+      for (let i = 1; i < rows.length; i++) {
+        if (rows[i].length < 3) continue;
+        const obj = {};
+        headers.forEach((h, j) => { obj[h] = rows[i][j] || ''; });
+        const building = csvRowToBuilding(obj);
+        if (!building.building_name) continue;
+        allRows.push(building);
+      }
+      loadedCount++;
+      console.log(`Loaded ${rows.length - 1} rows from ${sheet.city} sheet`);
+    } catch (e) {
+      errorCount++;
+      console.warn(`Failed to load ${sheet.city} sheet:`, e);
+    }
+  }
+
+  const meta = document.querySelector('.header-meta');
+  if (loadedCount > 0) {
+    buildings.length = 0;
+    allRows.forEach(r => buildings.push(r));
+    const now = new Date().toLocaleTimeString();
+    if (meta) {
+      const status = errorCount > 0
+        ? `<span style="color:var(--yellow);">&#9679;</span> Partial — ${loadedCount} sheet(s) live, ${errorCount} failed`
+        : `<span style="color:var(--green);">&#9679;</span> Live from Google Sheets`;
+      meta.innerHTML = `Cloud9 | Campaign 2026 | ${status} | Last fetched: ${now}`;
+    }
+  } else if (meta) {
+    meta.innerHTML = `Cloud9 | Campaign 2026 | <span style="color:var(--orange);">&#9679;</span> Offline — using embedded data`;
+  }
+}
+
+// Init
+loadFromSheet().then(() => renderAll());
+
+// Auto-refresh from sheets
+if (USE_SHEET && AUTO_REFRESH_MINUTES > 0) {
+  setInterval(async () => {
+    await loadFromSheet();
+    renderAll();
+  }, AUTO_REFRESH_MINUTES * 60 * 1000);
+}
+</script>
+</body>
+</html>
