@@ -119,10 +119,17 @@
   .tier-card-label { font-size: 12px; color: var(--text2); margin-top: 4px; }
 
   /* Expand row */
+  .expand-row { display: none; }
+  .expand-row.open { display: table-row; }
   .expand-row td { padding: 16px 24px; background: var(--surface2); }
-  .expand-content { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; }
-  .expand-content dt { color: var(--text2); }
-  .expand-content dd { margin-bottom: 8px; }
+  .expand-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 13px; }
+  .expand-detail .detail-group { display: flex; flex-direction: column; gap: 6px; }
+  .detail-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .detail-value { font-size: 14px; }
+  .detail-value.am-name { color: var(--green); font-weight: 600; font-size: 15px; }
+  .detail-value.am-response { font-style: italic; color: var(--text2); line-height: 1.4; }
+  .clickable-row { cursor: pointer; }
+  .clickable-row:hover td:first-child { color: var(--accent); }
 
   /* Notes highlight */
   .note-flag { color: var(--yellow); font-weight: 600; }
@@ -519,13 +526,41 @@ function renderKPIs() {
   ).join('');
 }
 
-// Buildings table
+// Buildings table with expandable AM detail
 function renderBuildings() {
   const filtered = getFiltered();
   const tbody = document.getElementById('buildings-tbody');
-  tbody.innerHTML = filtered.map(b => `
-    <tr>
-      <td><strong>${b.building_name}</strong></td>
+  tbody.innerHTML = filtered.map((b, i) => {
+    const hasAM = b.right_am_name;
+    const amIndicator = hasAM ? ' <span style="color:var(--green);font-size:10px;" title="Right AM found">&#9679;</span>' : '';
+    const expandRow = `
+    <tr class="expand-row" id="expand-${i}">
+      <td colspan="10">
+        <div class="expand-detail">
+          <div class="detail-group">
+            <span class="detail-label">Right Asset Manager</span>
+            <span class="detail-value am-name">${b.right_am_name || 'Not yet identified'}</span>
+            <span class="detail-value">${b.right_am_title || ''}</span>
+            ${b.right_am_email ? `<span class="detail-value"><a href="mailto:${b.right_am_email}" style="color:var(--accent);">${b.right_am_email}</a></span>` : ''}
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Response / Intel</span>
+            <span class="detail-value am-response">${b.right_am_response || 'No response yet'}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Property Manager</span>
+            <span class="detail-value">${b.pm || '—'}</span>
+          </div>
+          <div class="detail-group">
+            <span class="detail-label">Address</span>
+            <span class="detail-value">${b.address || '—'}</span>
+          </div>
+        </div>
+      </td>
+    </tr>`;
+    return `
+    <tr class="clickable-row" onclick="document.getElementById('expand-${i}').classList.toggle('open')">
+      <td><strong>${b.building_name}</strong>${amIndicator}</td>
       <td>${b.city}</td>
       <td>${b.owner}${b.owner_2 ? '<br><span style="color:var(--text2);font-size:11px;">+ ' + b.owner_2 + '</span>' : ''}</td>
       <td>${b.units || '—'}</td>
@@ -535,8 +570,8 @@ function renderBuildings() {
       <td>${tierBar(b)}</td>
       <td style="font-size:11px;color:var(--text2);">${b.batch}</td>
       <td style="font-size:11px;" class="${noteStyle(b.notes)}">${b.notes || ''}</td>
-    </tr>
-  `).join('');
+    </tr>${expandRow}`;
+  }).join('');
   document.getElementById('no-results').style.display = filtered.length ? 'none' : 'block';
 }
 
@@ -802,6 +837,10 @@ function csvRowToBuilding(obj) {
     apollo_owner_1: obj['apollo owner 1'] || '',
     apollo_owner_2: obj['apollo owner 2'] || '',
     apollo_owner_3: obj['apollo owner 3'] || '',
+    right_am_name: obj['right am name'] || obj.right_am_name || '',
+    right_am_title: obj['right am title'] || obj.right_am_title || '',
+    right_am_email: obj['right am email'] || obj.right_am_email || '',
+    right_am_response: obj['right am response'] || obj.right_am_response || '',
   };
 }
 
