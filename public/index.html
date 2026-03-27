@@ -82,6 +82,15 @@
   .badge-dnc { background: rgba(239,68,68,0.15); color: var(--red); }
   .badge-contacted { background: rgba(107,114,128,0.15); color: var(--gray); }
   .badge-flagged { background: rgba(234,179,8,0.15); color: var(--yellow); }
+  .badge-must-respond { background: rgba(239,68,68,0.3); color: #ff6b6b; font-weight: 700; animation: pulse 2s infinite; }
+  .badge-gatekeeper { background: rgba(249,115,22,0.25); color: var(--orange); font-weight: 700; }
+  .badge-waiting-referral { background: rgba(59,130,246,0.2); color: #60a5fa; }
+  .badge-phase2-sent { background: rgba(34,197,94,0.15); color: #4ade80; }
+  .badge-declined { background: rgba(107,114,128,0.3); color: #9ca3af; text-decoration: line-through; }
+  .badge-stale-ownership { background: rgba(107,114,128,0.25); color: var(--gray); text-decoration: line-through; }
+  .badge-disposition { background: rgba(107,114,128,0.3); color: #9ca3af; text-decoration: line-through; }
+  .badge-unenrolled { background: rgba(255,255,255,0.08); color: #6b7280; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
 
   /* Tier bars */
   .tier-bar { display: flex; height: 20px; border-radius: 4px; overflow: hidden; min-width: 100px; }
@@ -157,7 +166,7 @@
 
 <div class="header">
   <h1>20 Buildings <span>Pipeline Dashboard</span></h1>
-  <div class="header-meta">Cloud9 | Campaign 2026 | Last updated: March 19, 2026</div>
+  <div class="header-meta">Cloud9 | Campaign 2026 | Last updated: March 27, 2026</div>
 </div>
 
 <!-- KPI Strip -->
@@ -190,7 +199,15 @@
     <button class="filter-btn" data-stage="ENROLLED">Enrolled</button>
     <button class="filter-btn" data-stage="DM-FOUND">DM Found</button>
     <button class="filter-btn" data-stage="ALREADY-CONTACTED">Already Contacted</button>
+    <button class="filter-btn" data-stage="MUST-RESPOND">Must Respond</button>
+    <button class="filter-btn" data-stage="GATEKEEPER">Gatekeeper</button>
+    <button class="filter-btn" data-stage="WAITING-ON-REFERRAL">Waiting on Referral</button>
+    <button class="filter-btn" data-stage="PHASE-2-SENT">Phase 2 Sent</button>
+    <button class="filter-btn" data-stage="DECLINED">Declined</button>
     <button class="filter-btn" data-stage="DNC">DNC</button>
+    <button class="filter-btn" data-stage="STALE-OWNERSHIP">Stale Ownership</button>
+    <button class="filter-btn" data-stage="DISPOSITION">Disposition</button>
+    <button class="filter-btn" data-stage="UNENROLLED">Unenrolled</button>
     <button class="filter-btn" data-stage="FLAGGED">Flagged</button>
   </div>
 </div>
@@ -450,6 +467,20 @@ function stageBadge(stage) {
     'DNC': ['DNC','badge-dnc'],
     'ALREADY-CONTACTED': ['Already Contacted','badge-contacted'],
     'FLAGGED': ['Flagged','badge-flagged'],
+    'MUST-RESPOND': ['Must Respond','badge-must-respond'],
+    'MUST RESPOND': ['Must Respond','badge-must-respond'],
+    'GATEKEEPER': ['Gatekeeper','badge-gatekeeper'],
+    'WAITING-ON-REFERRAL': ['Waiting on Referral','badge-waiting-referral'],
+    'WAITING ON REFERRAL': ['Waiting on Referral','badge-waiting-referral'],
+    'PHASE-2-SENT': ['Phase 2 Sent','badge-phase2-sent'],
+    'PHASE 2 SENT': ['Phase 2 Sent','badge-phase2-sent'],
+    'DECLINED': ['Declined','badge-declined'],
+    'STALE-OWNERSHIP': ['Stale Ownership','badge-stale-ownership'],
+    'STALE OWNERSHIP': ['Stale Ownership','badge-stale-ownership'],
+    'DISPOSITION': ['Disposition','badge-disposition'],
+    'UNENROLLED': ['Unenrolled','badge-unenrolled'],
+    'REFERRAL PENDING': ['Referral Pending','badge-waiting-referral'],
+    'REFERRAL-PENDING': ['Referral Pending','badge-waiting-referral'],
   };
   const [label, cls] = map[stage] || [stage, ''];
   return `<span class="badge ${cls}">${label}</span>`;
@@ -483,8 +514,8 @@ let searchTerm = '';
 function getFiltered() {
   return buildings.filter(b => {
     if (cityFilter !== 'all' && b.city !== cityFilter) return false;
-    if (stageFilter === 'active' && ['DNC','ALREADY-CONTACTED','FLAGGED'].includes(b.stage)) return false;
-    if (stageFilter !== 'all' && stageFilter !== 'active' && b.stage !== stageFilter) return false;
+    if (stageFilter === 'active' && ['DNC','ALREADY-CONTACTED','FLAGGED','DECLINED','STALE-OWNERSHIP','STALE OWNERSHIP','DISPOSITION','UNENROLLED'].includes(b.stage)) return false;
+    if (stageFilter !== 'all' && stageFilter !== 'active' && b.stage !== stageFilter && b.stage.replace(/ /g,'-') !== stageFilter && b.stage.replace(/-/g,' ') !== stageFilter.replace(/-/g,' ')) return false;
     if (searchTerm) {
       const s = searchTerm.toLowerCase();
       const haystack = [b.building_name, b.owner, b.owner_2, b.pm, b.city, b.batch, b.notes].join(' ').toLowerCase();
@@ -500,11 +531,11 @@ function renderKPIs() {
   const all = buildings;
   const isFiltered = cityFilter !== 'all' || stageFilter !== 'all' || searchTerm;
   const dataset = isFiltered ? filtered : all;
-  const active = dataset.filter(b => !['DNC','ALREADY-CONTACTED','FLAGGED'].includes(b.stage));
+  const active = dataset.filter(b => !['DNC','ALREADY-CONTACTED','FLAGGED','DECLINED','STALE-OWNERSHIP','STALE OWNERSHIP','DISPOSITION','UNENROLLED'].includes(b.stage));
   const cities = [...new Set(dataset.map(b => b.city))];
   const totalContacts = dataset.reduce((s, b) => s + (b.total || 0), 0);
   const p1Total = dataset.reduce((s, b) => s + b.p1, 0);
-  const dmFound = dataset.filter(b => b.stage === 'DM-FOUND').length;
+  const dmFound = dataset.filter(b => ['DM-FOUND','DM FOUND','MUST-RESPOND','MUST RESPOND','PHASE-2-SENT','PHASE 2 SENT','GATEKEEPER','WAITING-ON-REFERRAL','WAITING ON REFERRAL','REFERRAL PENDING'].includes(b.stage)).length;
   const enrolled = dataset.filter(b => b.stage === 'ENROLLED').length;
   const sequencesWritten = dataset.filter(b => b.stage === 'SEQUENCES-WRITTEN').length;
   const apolloReady = dataset.filter(b => b.stage === 'APOLLO-READY').length;
@@ -639,7 +670,7 @@ function renderPipeline() {
   const container = document.getElementById('funnel-container');
 
   container.innerHTML = cities.map(city => {
-    const cityBuildings = buildings.filter(b => b.city === city && !['DNC','ALREADY-CONTACTED','FLAGGED'].includes(b.stage));
+    const cityBuildings = buildings.filter(b => b.city === city && !['DNC','ALREADY-CONTACTED','FLAGGED','DECLINED','STALE-OWNERSHIP','STALE OWNERSHIP','DISPOSITION','UNENROLLED'].includes(b.stage));
     const maxCount = Math.max(...stageOrder.map(s => cityBuildings.filter(b => b.stage === s).length), 1);
 
     return `
