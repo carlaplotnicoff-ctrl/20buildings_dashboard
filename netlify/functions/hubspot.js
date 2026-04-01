@@ -49,6 +49,7 @@ exports.handler = async () => {
 async function getAllContacts(token) {
   const properties = [
     'building_name',
+    'matching_buildings', // Chicago contacts use this property instead
     'market',
     'tier',
     'hs_sequences_is_enrolled',
@@ -61,9 +62,11 @@ async function getAllContacts(token) {
 
   do {
     const body = {
-      filterGroups: [{
-        filters: [{ propertyName: 'building_name', operator: 'HAS_PROPERTY' }],
-      }],
+      // OR across filterGroups: Dallas/Houston use building_name, Chicago uses matching_buildings
+      filterGroups: [
+        { filters: [{ propertyName: 'building_name', operator: 'HAS_PROPERTY' }] },
+        { filters: [{ propertyName: 'matching_buildings', operator: 'HAS_PROPERTY' }] },
+      ],
       properties,
       limit: 100,
     };
@@ -96,7 +99,8 @@ function groupByBuilding(contacts) {
 
   for (const contact of contacts) {
     const p = contact.properties;
-    const name = (p.building_name || '').trim();
+    // Dallas/Houston use building_name; Chicago uses matching_buildings
+    const name = (p.building_name || p.matching_buildings || '').trim();
     if (!name) continue;
 
     if (!buildings[name]) {
