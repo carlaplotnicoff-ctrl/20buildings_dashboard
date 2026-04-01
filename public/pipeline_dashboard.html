@@ -6,7 +6,14 @@
     <title>20 Buildings — Pipeline Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+        window._sbClient = createClient(
+            'https://gapfldixgqpmlzwijftm.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhcGZsZGl4Z3FwbWx6d2lqZnRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNTQ3NTYsImV4cCI6MjA5MDYzMDc1Nn0.qf1cX1BacUwMuemFKd7WdUmZ4uDoJNJWnUWBp5fCT3U'
+        );
+        window.dispatchEvent(new Event('supabase-ready'));
+    </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -639,7 +646,7 @@
 // ===== SUPABASE CONFIG =======================================================
 const SUPABASE_URL  = 'https://gapfldixgqpmlzwijftm.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhcGZsZGl4Z3FwbWx6d2lqZnRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNTQ3NTYsImV4cCI6MjA5MDYzMDc1Nn0.qf1cX1BacUwMuemFKd7WdUmZ4uDoJNJWnUWBp5fCT3U';
-window._sbClient = (typeof supabase !== 'undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
+// _sbClient is set by the ESM module in <head>
 // =============================================================================
 
 
@@ -659,12 +666,7 @@ function toast(msg, type='info') {
     setTimeout(() => t.remove(), 3500);
 }
 
-// Connection indicator
-(function() {
-    const on = !!window._sbClient;
-    document.getElementById('connDot').className = `conn-dot ${on?'on':'off'}`;
-    document.getElementById('connLbl').textContent = on ? 'Live' : 'Offline';
-})();
+// Connection indicator — updated in setup() after ESM module fires
 
 // Supabase data loader
 async function loadAllData() {
@@ -684,6 +686,8 @@ async function loadAllData() {
 
 function setup() {
     if (!window._sbClient) return;
+    document.getElementById('connDot').className = 'conn-dot on';
+    document.getElementById('connLbl').textContent = 'Live';
     loadAllData();
 }
 
@@ -1544,7 +1548,7 @@ function init() {
     if (saved) document.getElementById('curUser').value = saved;
     document.getElementById('curUser').addEventListener('change', () => localStorage.setItem('20b_user', getUser()));
 }
-init();
+window.addEventListener('supabase-ready', init);
 </script>
 </body>
 </html>
