@@ -7,8 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -457,28 +455,81 @@
 
     <!-- TAB 4: EMAIL OUTREACH -->
     <div class="tab-content" id="tab-outreach">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
-            <div style="display:flex;align-items:center;gap:10px">
-                <span id="hsSourceBadge" style="font-size:0.7rem;padding:3px 10px;border-radius:5px;font-weight:600"></span>
-                <span id="hsLastUpdated" style="color:#9ca3af;font-size:0.72rem"></span>
+
+        <!-- Header -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+            <div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+                    <span id="hsSourceBadge"></span>
+                    <span id="hsLastUpdated" style="color:#9ca3af;font-size:0.72rem;font-weight:500"></span>
+                </div>
+                <h2 style="font-size:1.18rem;font-weight:700;color:#1a1f36;letter-spacing:-0.4px;margin:0">Email Sequence Performance</h2>
+                <p style="font-size:0.78rem;color:#6b7280;margin-top:3px">All active markets · HubSpot Sequences</p>
             </div>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                <input type="password" id="hsToken" placeholder="HubSpot token (optional — for enrolled counts)"
-                    style="width:290px;background:rgba(255,255,255,0.82);border:1px solid rgba(0,0,0,0.10);color:#1a1f36;padding:7px 12px;border-radius:8px;font-size:0.78rem;font-family:inherit;box-shadow:0 1px 3px rgba(0,0,0,0.05)"
-                    oninput="saveHsToken(this.value)">
+            <div style="display:flex;gap:8px;align-items:center">
+                <button class="btn btn-s btn-sm" onclick="openSnapshotEditor()">Edit Snapshot</button>
                 <button class="btn btn-p btn-sm" onclick="refreshOutreachMetrics()">Refresh</button>
             </div>
         </div>
 
-        <div class="sh">Email Sequence Performance</div>
-        <div class="metrics-row" id="omKpiCards"></div>
+        <!-- 4 KPI Cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;margin-bottom:24px" id="omKpiCards"></div>
 
-        <div class="sh">Market Breakdown</div>
-        <div id="omMarketCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px"></div>
+        <!-- Chart left + Market cards right -->
+        <div class="two-col" style="align-items:start">
+            <div class="cc" style="margin-bottom:0">
+                <div class="ct">Open &amp; Reply Rate by Market</div>
+                <div class="cw short"><canvas id="omMarketChart"></canvas></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px" id="omMarketCards"></div>
+        </div>
 
-        <div class="footnote">
-            Events tracked via HubSpot Workflows → Supabase &middot; Enrolled counts from HubSpot API &middot;
-            <a href="#" onclick="refreshOutreachMetrics();return false">Refresh now</a>
+        <div class="footnote" style="margin-top:16px">
+            Rates from HubSpot Sequences export &middot; Enrollment counts via HubSpot API &middot;
+            <a href="#" onclick="openSnapshotEditor();return false">Update snapshot</a>
+        </div>
+    </div>
+
+    <!-- SNAPSHOT EDITOR MODAL -->
+    <div class="mo" id="snapshotModal">
+        <div class="modal" style="max-width:560px">
+            <h2>Update Outreach Snapshot</h2>
+            <p style="color:#6b7280;font-size:0.82rem;margin:-10px 0 18px">Paste the latest numbers from your HubSpot Sequences report.</p>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="mf"><label>Total Enrolled</label><input type="number" id="snEnrolled" placeholder="2004"></div>
+                <div class="mf"><label>Snapshot Date</label><input type="text" id="snDate" placeholder="Apr 1"></div>
+                <div class="mf"><label>Opens</label><input type="number" id="snOpens" placeholder="523"></div>
+                <div class="mf"><label>Open Rate %</label><input type="number" step="0.1" id="snOpenRate" placeholder="26.1"></div>
+                <div class="mf"><label>Replies</label><input type="number" id="snReplies" placeholder="51"></div>
+                <div class="mf"><label>Reply Rate %</label><input type="number" step="0.1" id="snReplyRate" placeholder="2.5"></div>
+                <div class="mf"><label>Bounces</label><input type="number" id="snBounces" placeholder="131"></div>
+                <div class="mf"><label>Bounce Rate %</label><input type="number" step="0.1" id="snBounceRate" placeholder="6.5"></div>
+            </div>
+
+            <div style="border-top:1px solid rgba(0,0,0,0.07);margin:16px 0;padding-top:16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+                    <div>
+                        <div style="font-size:0.78rem;font-weight:700;color:#1a1f36;margin-bottom:10px">Chicago</div>
+                        <div class="mf"><label>Enrolled</label><input type="number" id="snChiEnrolled" placeholder="1128"></div>
+                        <div class="mf"><label>Open Rate %</label><input type="number" step="0.1" id="snChiOpenRate" placeholder="37.1"></div>
+                        <div class="mf"><label>Reply Rate %</label><input type="number" step="0.1" id="snChiReplyRate" placeholder="2.9"></div>
+                        <div class="mf"><label>Bounce Rate %</label><input type="number" step="0.1" id="snChiBounceRate" placeholder="4.3"></div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.78rem;font-weight:700;color:#1a1f36;margin-bottom:10px">Houston</div>
+                        <div class="mf"><label>Enrolled</label><input type="number" id="snHouEnrolled" placeholder="876"></div>
+                        <div class="mf"><label>Open Rate %</label><input type="number" step="0.1" id="snHouOpenRate" placeholder="12.0"></div>
+                        <div class="mf"><label>Reply Rate %</label><input type="number" step="0.1" id="snHouReplyRate" placeholder="2.1"></div>
+                        <div class="mf"><label>Bounce Rate %</label><input type="number" step="0.1" id="snHouBounceRate" placeholder="9.5"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mactions">
+                <button class="btn btn-s" onclick="closeM('snapshotModal')">Cancel</button>
+                <button class="btn btn-p" onclick="saveSnapshot()">Save Snapshot</button>
+            </div>
         </div>
     </div>
 
@@ -558,27 +609,39 @@
 
 <script>
 // =============================================================================
-// ===== FIREBASE CONFIG — paste yours here ====================================
-// =============================================================================
-const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-};
+// ===== DATA STORE: SUPABASE ==================================================
+// Required tables (run once in Supabase SQL editor):
+//
+// CREATE TABLE IF NOT EXISTS contacts (
+//   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+//   full_name text, first_name text, last_name text, job_title text,
+//   company text, email text, phone text, alt_phone text,
+//   building_name text, building_address text, total_units text,
+//   owner text, property_manager text, linkedin text,
+//   priority_tier integer DEFAULT 3, pain_point text,
+//   pct_available text, br2_plus_available text,
+//   landing_page_clicks numeric DEFAULT 0,
+//   contact_status text DEFAULT 'Not Contacted',
+//   last_touch_date text, total_touches integer DEFAULT 0,
+//   touch_channel text, right_asset_manager text, call_notes text,
+//   last_updated timestamptz, updated_by text
+// );
+//
+// CREATE TABLE IF NOT EXISTS touch_log (
+//   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+//   timestamp timestamptz, contact_id uuid, contact_name text,
+//   building_name text, channel text, outcome text,
+//   objections text, notes text, next_step text,
+//   next_step_date text, logged_by text
+// );
 // =============================================================================
 
 // ===== SUPABASE CONFIG =======================================================
-const SUPABASE_URL  = 'https://vkqbursibhgkylnwwils.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrcWJ1cnNpYmhna3lsbnd3aWxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5MzIxNjUsImV4cCI6MjA4MzUwODE2NX0.NV53QmMcZUOlmps4pTrGO8__EHBH2DBnsOBQf3JZD5Q';
+const SUPABASE_URL  = 'https://gapfldixgqpmlzwijftm.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhcGZsZGl4Z3FwbWx6d2lqZnRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNTQ3NTYsImV4cCI6MjA5MDYzMDc1Nn0.qf1cX1BacUwMuemFKd7WdUmZ4uDoJNJWnUWBp5fCT3U';
 window._sbClient = (typeof supabase !== 'undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
 // =============================================================================
 
-let db;
-try { firebase.initializeApp(firebaseConfig); db = firebase.database(); } catch(e) { console.warn('Firebase init:', e.message); }
 
 let contacts = {}, touchLog = {}, config = {
     contact_statuses: ["Not Contacted","Attempting","Reached – Warm","Proposal Sent","Reached – Cold","Gatekeeper Only","Wrong Contact","Hard No","Unsubscribed"],
@@ -597,18 +660,31 @@ function toast(msg, type='info') {
 }
 
 // Connection indicator
-if (db) db.ref('.info/connected').on('value', s => {
-    const on = s.val() === true;
+(function() {
+    const on = !!window._sbClient;
     document.getElementById('connDot').className = `conn-dot ${on?'on':'off'}`;
     document.getElementById('connLbl').textContent = on ? 'Live' : 'Offline';
-});
+})();
 
-// Firebase listeners
+// Supabase data loader
+async function loadAllData() {
+    if (!window._sbClient) return;
+    const [{ data: cData, error: cErr }, { data: tData, error: tErr }] = await Promise.all([
+        window._sbClient.from('contacts').select('*'),
+        window._sbClient.from('touch_log').select('*')
+    ]);
+    if (cErr) console.error('Contacts load error:', cErr.message);
+    if (tErr) console.error('Touch log load error:', tErr.message);
+    contacts = {};
+    (cData || []).forEach(c => { contacts[c.id] = c; });
+    touchLog = {};
+    (tData || []).forEach(t => { touchLog[t.id] = t; });
+    renderAll();
+}
+
 function setup() {
-    if (!db) return;
-    db.ref('contacts').on('value', s => { contacts = s.val() || {}; renderAll(); });
-    db.ref('touch_log').on('value', s => { touchLog = s.val() || {}; renderAll(); });
-    db.ref('config').on('value', s => { const c = s.val(); if(c) config = c; });
+    if (!window._sbClient) return;
+    loadAllData();
 }
 
 function renderAll() { renderDash(); renderPipeline(); renderContacts(); }
@@ -928,10 +1004,13 @@ function renderPipeline() {
     if (el) el.addEventListener(el.tagName==='INPUT'?'input':'change', renderPipeline);
 });
 
-function moveContact(cid, newStatus) {
-    if (!db) { toast('Not connected','err'); return; }
-    db.ref(`contacts/${cid}`).update({ contact_status: newStatus, last_updated: new Date().toISOString(), updated_by: getUser() })
-      .then(() => toast(`Status → ${newStatus}`,'ok')).catch(e => toast('Error: '+e.message,'err'));
+async function moveContact(cid, newStatus) {
+    if (!window._sbClient) { toast('Not connected','err'); return; }
+    const { error } = await window._sbClient.from('contacts')
+        .update({ contact_status: newStatus, last_updated: new Date().toISOString(), updated_by: getUser() })
+        .eq('id', cid);
+    if (error) toast('Error: '+error.message,'err');
+    else { toast(`Status → ${newStatus}`,'ok'); loadAllData(); }
 }
 
 function showBldgContacts(bldgName) {
@@ -1041,8 +1120,8 @@ function openTouchM(cid) {
     openM('touchModal');
 }
 
-function submitTouch() {
-    if (!db) { toast('Not connected','err'); return; }
+async function submitTouch() {
+    if (!window._sbClient) { toast('Not connected','err'); return; }
     const cid     = document.getElementById('tmCid').value;
     const c       = contacts[cid];
     const channel = document.getElementById('tmChannel').value;
@@ -1079,11 +1158,12 @@ function submitTouch() {
     const contactUpdates = { last_touch_date: today, total_touches: currentTouches + 1, touch_channel: touchChan, last_updated: now, updated_by: getUser() };
     if (statusToSet) contactUpdates.contact_status = statusToSet;
 
-    Promise.all([
-        db.ref('touch_log').push(entry),
-        db.ref(`contacts/${cid}`).update(contactUpdates)
-    ]).then(() => { toast(`Logged: ${outcome}`,'ok'); closeM('touchModal'); })
-      .catch(e => toast('Error: '+e.message,'err'));
+    const [{ error: e1 }, { error: e2 }] = await Promise.all([
+        window._sbClient.from('touch_log').insert(entry),
+        window._sbClient.from('contacts').update(contactUpdates).eq('id', cid)
+    ]);
+    if (e1 || e2) toast('Error: '+(e1||e2).message,'err');
+    else { toast(`Logged: ${outcome}`,'ok'); closeM('touchModal'); loadAllData(); }
 }
 
 function openAddModal() {
@@ -1092,8 +1172,8 @@ function openAddModal() {
     openM('addModal');
 }
 
-function submitAdd() {
-    if (!db) { toast('Not connected','err'); return; }
+async function submitAdd() {
+    if (!window._sbClient) { toast('Not connected','err'); return; }
     const name = document.getElementById('anName').value.trim();
     const bldg = document.getElementById('anBldg').value.trim();
     if (!name || !bldg) { toast('Name and Building required','err'); return; }
@@ -1111,27 +1191,32 @@ function submitAdd() {
         last_touch_date:'', total_touches:0, touch_channel:'', right_asset_manager:'', call_notes:'',
         last_updated:new Date().toISOString(), updated_by:getUser()
     };
-    db.ref('contacts').push(contact).then(()=>{toast(`Added: ${name}`,'ok');closeM('addModal');}).catch(e=>toast('Error: '+e.message,'err'));
+    const { error } = await window._sbClient.from('contacts').insert(contact);
+    if (error) toast('Error: '+error.message,'err');
+    else { toast(`Added: ${name}`,'ok'); closeM('addModal'); loadAllData(); }
 }
 
-function delContact(cid) {
-    if (!db) return;
-    db.ref(`contacts/${cid}`).remove().then(()=>{toast('Deleted','info');closeDP();}).catch(e=>toast('Error: '+e.message,'err'));
+async function delContact(cid) {
+    if (!window._sbClient) return;
+    const { error } = await window._sbClient.from('contacts').delete().eq('id', cid);
+    if (error) toast('Error: '+error.message,'err');
+    else { toast('Deleted','info'); closeDP(); loadAllData(); }
 }
 
 // =============================================================================
 // CSV UPLOAD / EXPORT
 // =============================================================================
 function handleCSV(event) {
-    const file = event.target.files[0]; if(!file||!db) return;
+    const file = event.target.files[0]; if(!file||!window._sbClient) return;
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         const rows = parseCSV(e.target.result);
         if (!rows.length) { toast('No data in CSV','err'); return; }
         if (!confirm(`Import ${rows.length} contacts from "${file.name}"?`)) return;
-        const batch = {};
-        rows.forEach(row => { const key = db.ref('contacts').push().key; batch[`contacts/${key}`] = mapRow(row); });
-        db.ref().update(batch).then(()=>{toast(`Imported ${rows.length}`,'ok');event.target.value='';}).catch(e=>toast('Error: '+e.message,'err'));
+        const mapped = rows.map(r => mapRow(r));
+        const { error } = await window._sbClient.from('contacts').insert(mapped);
+        if (error) toast('Error: '+error.message,'err');
+        else { toast(`Imported ${rows.length}`,'ok'); event.target.value=''; loadAllData(); }
     };
     reader.readAsText(file);
 }
@@ -1278,96 +1363,181 @@ async function fetchOutreachMetrics() {
     }
 }
 
+let omChart = null;
+
 function renderOutreachTab(data) {
     const t = data.total;
-    const badge      = document.getElementById('hsSourceBadge');
-    const lastUpdEl  = document.getElementById('hsLastUpdated');
-    const fmtRate = r => (r !== null && r !== undefined) ? r+'%' : '—';
-    const fmtNum  = n => (n !== null && n !== undefined) ? n.toLocaleString() : '—';
+    const fmtRate = r => (r != null) ? r+'%' : '—';
+    const fmtNum  = n => (n != null) ? Number(n).toLocaleString() : '—';
 
+    // Source badge
+    const badge     = document.getElementById('hsSourceBadge');
+    const lastUpdEl = document.getElementById('hsLastUpdated');
     if (data.source === 'live') {
         badge.textContent = '● Live';
-        badge.style.cssText = 'background:rgba(16,185,129,0.12);color:#059669;font-size:0.7rem;padding:3px 10px;border-radius:5px;font-weight:600';
+        badge.style.cssText = 'background:rgba(16,185,129,0.12);color:#059669;font-size:0.7rem;padding:3px 10px;border-radius:20px;font-weight:600;letter-spacing:0.2px';
         lastUpdEl.textContent = 'Updated just now';
     } else if (data.source === 'cached') {
         const mins = Math.floor((Date.now() - (data.fetchedAt||0)) / 60000);
         badge.textContent = '◌ Cached';
-        badge.style.cssText = 'background:rgba(79,124,255,0.12);color:#4f7cff;font-size:0.7rem;padding:3px 10px;border-radius:5px;font-weight:600';
+        badge.style.cssText = 'background:rgba(79,124,255,0.12);color:#4f7cff;font-size:0.7rem;padding:3px 10px;border-radius:20px;font-weight:600;letter-spacing:0.2px';
         lastUpdEl.textContent = `${mins} min${mins!==1?'s':''} ago`;
     } else {
         badge.textContent = `Snapshot · ${data.snapshotDate||'Mar 24'}`;
-        badge.style.cssText = 'background:rgba(245,158,11,0.12);color:#d97706;font-size:0.7rem;padding:3px 10px;border-radius:5px;font-weight:600';
-        lastUpdEl.textContent = 'Set up HubSpot webhooks → Supabase for live data';
+        badge.style.cssText = 'background:rgba(245,158,11,0.12);color:#d97706;font-size:0.7rem;padding:3px 10px;border-radius:20px;font-weight:600;letter-spacing:0.2px';
+        lastUpdEl.textContent = 'Click "Edit Snapshot" to update with the latest HubSpot export';
     }
 
+    // 4 KPI Cards — left-aligned, big number + sub-value
     document.getElementById('omKpiCards').innerHTML = `
-        <div class="metric-card"><div class="mv mv-blue">${fmtNum(t.enrolled)}</div><div class="ml">Enrolled</div></div>
-        <div class="metric-card"><div class="mv mv-green">${fmtRate(t.openRate)}</div><div class="ml">Open Rate</div></div>
-        <div class="metric-card"><div class="mv mv-blue">${fmtNum(t.opens)}</div><div class="ml">Opens</div></div>
-        <div class="metric-card"><div class="mv mv-blue">${fmtRate(t.replyRate)}</div><div class="ml">Reply Rate</div></div>
-        <div class="metric-card"><div class="mv mv-blue">${fmtNum(t.replies)}</div><div class="ml">Replies</div></div>
-        <div class="metric-card"><div class="mv mv-red">${fmtRate(t.bounceRate)}</div><div class="ml">Bounce Rate</div></div>
+        <div class="metric-card" style="text-align:left;padding:20px 22px">
+            <div class="mv mv-blue" style="font-size:2.1rem;letter-spacing:-1.5px">${fmtNum(t.enrolled)}</div>
+            <div class="ml" style="margin-top:6px">Total Enrolled</div>
+            <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px">contacts in sequence</div>
+        </div>
+        <div class="metric-card" style="text-align:left;padding:20px 22px">
+            <div class="mv mv-green" style="font-size:2.1rem;letter-spacing:-1.5px">${fmtRate(t.openRate)}</div>
+            <div class="ml" style="margin-top:6px">Open Rate</div>
+            <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px">${fmtNum(t.opens)} contacts opened</div>
+        </div>
+        <div class="metric-card" style="text-align:left;padding:20px 22px">
+            <div class="mv" style="font-size:2.1rem;letter-spacing:-1.5px;color:#7c3aed">${fmtRate(t.replyRate)}</div>
+            <div class="ml" style="margin-top:6px">Reply Rate</div>
+            <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px">${fmtNum(t.replies)} replied</div>
+        </div>
+        <div class="metric-card" style="text-align:left;padding:20px 22px">
+            <div class="mv mv-red" style="font-size:2.1rem;letter-spacing:-1.5px">${fmtRate(t.bounceRate)}</div>
+            <div class="ml" style="margin-top:6px">Bounce Rate</div>
+            <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px">${fmtNum(t.bounces)} bounced</div>
+        </div>
     `;
 
-    const marketColors = { open:'#10b981', reply:'#4f7cff', bounce:'#ef4444' };
-    const container = document.getElementById('omMarketCards');
+    // Chart.js grouped bar — market open & reply rate comparison
     if (data.markets && data.markets.length) {
-        container.innerHTML = data.markets.map(m => `
-            <div class="cc" style="margin-bottom:0">
-                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">
-                    <span style="font-weight:700;font-size:1rem;color:#1a1f36">${m.name}</span>
-                    <span style="font-size:0.78rem;color:#6b7280">${fmtNum(m.enrolled)} enrolled</span>
+        const ctx = document.getElementById('omMarketChart');
+        if (ctx) {
+            if (omChart) { omChart.destroy(); omChart = null; }
+            const mNames  = data.markets.map(m => m.name);
+            const opens   = data.markets.map(m => m.openRate  || 0);
+            const replies = data.markets.map(m => m.replyRate || 0);
+            const bounces = data.markets.map(m => m.bounceRate|| 0);
+            omChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: mNames,
+                    datasets: [
+                        { label: 'Open Rate',   data: opens,   backgroundColor: 'rgba(16,185,129,0.72)', borderRadius: 6, barPercentage: 0.55 },
+                        { label: 'Reply Rate',  data: replies, backgroundColor: 'rgba(124,58,237,0.65)', borderRadius: 6, barPercentage: 0.55 },
+                        { label: 'Bounce Rate', data: bounces, backgroundColor: 'rgba(239,68,68,0.55)',  borderRadius: 6, barPercentage: 0.55 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, padding: 18, font: { size: 11, family: 'Inter, sans-serif' }, color: '#4b5563' } },
+                        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.raw}%` } }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 12, weight: '600' } } },
+                        y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#9ca3af', font: { size: 11 }, callback: v => v+'%' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Market cards with pill header + rate bars
+        const mAccent = ['#4f7cff', '#10b981', '#f59e0b', '#7c3aed'];
+        document.getElementById('omMarketCards').innerHTML = data.markets.map((m, i) => `
+            <div class="cc" style="margin-bottom:0;border-left:3px solid ${mAccent[i%mAccent.length]}">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                    <div>
+                        <div style="font-size:0.95rem;font-weight:700;color:#1a1f36">${m.name}</div>
+                        <div style="font-size:0.72rem;color:#9ca3af;margin-top:1px">${fmtNum(m.enrolled)} enrolled</div>
+                    </div>
+                    <div style="font-size:1.6rem;font-weight:700;color:${mAccent[i%mAccent.length]};letter-spacing:-1px">${fmtRate(m.openRate)}</div>
                 </div>
-                ${[['open','Opens',m.opens,m.openRate],['reply','Replies',m.replies,m.replyRate],['bounce','Bounces',m.bounces,m.bounceRate]].map(([key,label,count,rate]) => `
-                    <div style="margin-bottom:11px">
-                        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                            <span style="font-size:0.78rem;color:#4b5563;font-weight:500">${label}</span>
-                            <span style="font-size:0.82rem;font-weight:700;color:${marketColors[key]}">${fmtRate(rate)}</span>
+                ${[['Open Rate',m.openRate,'#10b981'],['Reply Rate',m.replyRate,'#7c3aed'],['Bounce Rate',m.bounceRate,'#ef4444']].map(([label,rate,color]) => `
+                    <div style="margin-bottom:10px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                            <span style="font-size:0.75rem;color:#6b7280;font-weight:500">${label}</span>
+                            <span style="font-size:0.8rem;font-weight:700;color:${color}">${fmtRate(rate)}</span>
                         </div>
-                        <div class="market-bar-track">
-                            <div class="market-bar-fill" style="width:${rate||0}%;background:${marketColors[key]};opacity:0.75"></div>
+                        <div style="width:100%;height:5px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden">
+                            <div style="width:${Math.min(rate||0,100)}%;height:100%;background:${color};border-radius:3px;transition:width 0.6s ease;opacity:0.8"></div>
                         </div>
-                        <div style="font-size:0.68rem;color:#9ca3af;margin-top:2px">${fmtNum(count)} contacts</div>
                     </div>
                 `).join('')}
             </div>
         `).join('');
     } else {
-        container.innerHTML = '<div class="no-data">No market breakdown available</div>';
+        document.getElementById('omMarketCards').innerHTML = '<div class="no-data">No market data — add via Edit Snapshot</div>';
     }
 }
 
 function loadOutreachTab() {
-    const token = getHsToken();
-    if (token) { const el = document.getElementById('hsToken'); if(el && !el.value) el.value = '•••••••••••'; }
-
-    // Show cached data immediately, then refresh from Supabase/HubSpot
+    // 1. Show live cache if fresh
     const cached = localStorage.getItem(HUBSPOT_CONFIG.cacheKey);
     if (cached) {
         const data = JSON.parse(cached);
-        const ageSecs = (Date.now() - (data.fetchedAt||0)) / 1000;
-        if (ageSecs < HUBSPOT_CONFIG.cacheTTL) {
+        if ((Date.now() - (data.fetchedAt||0)) / 1000 < HUBSPOT_CONFIG.cacheTTL) {
             renderOutreachTab({ ...data, source:'cached' });
+            return;
         }
     }
+    // 2. Custom snapshot saved via Edit Snapshot modal
+    const customSnap = localStorage.getItem('20b_snapshot_custom');
+    if (customSnap) { renderOutreachTab(JSON.parse(customSnap)); return; }
+    // 3. Try live fetch, fall back to built-in snapshot
     fetchOutreachMetrics();
 }
 
 function refreshOutreachMetrics() { fetchOutreachMetrics(); }
 
+function openSnapshotEditor() {
+    const snap = JSON.parse(localStorage.getItem('20b_snapshot_custom') || JSON.stringify(OUTREACH_SNAPSHOT));
+    const t = snap.total || {};
+    const setVal = (id, v) => { const el = document.getElementById(id); if(el && v != null) el.value = v; };
+    setVal('snEnrolled',  t.enrolled);   setVal('snOpens',     t.opens);
+    setVal('snOpenRate',  t.openRate);   setVal('snReplies',   t.replies);
+    setVal('snReplyRate', t.replyRate);  setVal('snBounces',   t.bounces);
+    setVal('snBounceRate',t.bounceRate); setVal('snDate', snap.snapshotDate||'');
+    const mkts = snap.markets || [];
+    if (mkts[0]) { setVal('snChiEnrolled',mkts[0].enrolled); setVal('snChiOpenRate',mkts[0].openRate); setVal('snChiReplyRate',mkts[0].replyRate); setVal('snChiBounceRate',mkts[0].bounceRate); }
+    if (mkts[1]) { setVal('snHouEnrolled',mkts[1].enrolled); setVal('snHouOpenRate',mkts[1].openRate); setVal('snHouReplyRate',mkts[1].replyRate); setVal('snHouBounceRate',mkts[1].bounceRate); }
+    openM('snapshotModal');
+}
+
+function saveSnapshot() {
+    const g = id => { const el = document.getElementById(id); return el ? parseFloat(el.value)||0 : 0; };
+    const gs = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    const chiE = g('snChiEnrolled'), houE = g('snHouEnrolled');
+    const snap = {
+        source: 'snapshot',
+        snapshotDate: gs('snDate') || 'Custom',
+        total: { enrolled:g('snEnrolled'), opens:g('snOpens'), openRate:g('snOpenRate'), replies:g('snReplies'), replyRate:g('snReplyRate'), bounces:g('snBounces'), bounceRate:g('snBounceRate') },
+        markets: [
+            { name:'Chicago', enrolled:chiE, opens:Math.round(chiE*(g('snChiOpenRate')/100)), openRate:g('snChiOpenRate'), replies:Math.round(chiE*(g('snChiReplyRate')/100)), replyRate:g('snChiReplyRate'), bounces:Math.round(chiE*(g('snChiBounceRate')/100)), bounceRate:g('snChiBounceRate') },
+            { name:'Houston', enrolled:houE, opens:Math.round(houE*(g('snHouOpenRate')/100)), openRate:g('snHouOpenRate'), replies:Math.round(houE*(g('snHouReplyRate')/100)), replyRate:g('snHouReplyRate'), bounces:Math.round(houE*(g('snHouBounceRate')/100)), bounceRate:g('snHouBounceRate') }
+        ]
+    };
+    localStorage.setItem('20b_snapshot_custom', JSON.stringify(snap));
+    renderOutreachTab(snap);
+    closeM('snapshotModal');
+    toast('Snapshot updated', 'ok');
+}
+
 // =============================================================================
 // INIT
 // =============================================================================
 function init() {
-    if (db) {
+    if (window._sbClient) {
         setup();
     } else {
         document.getElementById('kpiCards').innerHTML = `
             <div style="grid-column:1/-1;text-align:center;padding:36px">
                 <div style="font-size:2rem;margin-bottom:10px">🔌</div>
-                <h2 style="margin-bottom:8px;color:#1a1f36;font-size:1.1rem">Firebase Not Connected</h2>
-                <p style="color:#6b7280;font-size:0.88rem">Paste your Firebase config in the script section of this file.</p>
-                <p style="margin-top:8px;color:#9ca3af;font-size:0.82rem">See <strong>SETUP.md</strong> for instructions.</p>
+                <h2 style="margin-bottom:8px;color:#1a1f36;font-size:1.1rem">Supabase Not Connected</h2>
+                <p style="color:#6b7280;font-size:0.88rem">Check the SUPABASE_URL and SUPABASE_ANON values in this file.</p>
             </div>`;
     }
     const saved = localStorage.getItem('20b_user');
