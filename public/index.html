@@ -963,14 +963,72 @@ async function loadFromSheet() {
   }
 }
 
-// Init
-loadFromSheet().then(() => renderAll());
+// ============================================================
+// HUBSPOT LIVE OVERLAY
+// ============================================================
 
-// Auto-refresh from sheets
+const HS_STAGE_RANK = {
+  'APOLLO-READY': 1, 'CONTACTS-SCORED': 2, 'SEQUENCES-WRITTEN': 3,
+  'ENROLLED': 4, 'REPLIED': 5, 'DM-FOUND': 6, 'GATEKEEPER': 7,
+  'MUST-RESPOND': 8, 'WAITING-ON-REFERRAL': 9, 'PHASE-2-SENT': 10,
+  'MEETING': 11, 'SIGNED': 12,
+};
+const HS_TERMINAL = new Set([
+  'DNC', 'DECLINED', 'STALE-OWNERSHIP', 'DISPOSITION',
+  'UNENROLLED', 'ALREADY-CONTACTED', 'FLAGGED',
+]);
+
+async function loadHubSpotOverlay() {
+  try {
+    const res = await fetch('/api/hubspot');
+    if (!res.ok) return;
+    const { buildings: hsData, fetchedAt } = await res.json();
+
+    let overlayCount = 0;
+    for (const b of buildings) {
+      const hs = hsData[b.building_name];
+      if (!hs) continue;
+
+      // Overlay live contact counts
+      b.total = hs.total;
+      b.p1 = hs.p1;
+      b.p2 = hs.p2;
+      b.p3 = hs.p3;
+      b.p4 = hs.p4;
+
+      // Advance stage if HubSpot shows higher engagement (never downgrade, never override terminal)
+      if (!HS_TERMINAL.has(b.stage) && hs.hubspotStage) {
+        const currentRank = HS_STAGE_RANK[b.stage] || 0;
+        const hsRank = HS_STAGE_RANK[hs.hubspotStage] || 0;
+        if (hsRank > currentRank) b.stage = hs.hubspotStage;
+      }
+
+      overlayCount++;
+    }
+
+    const meta = document.querySelector('.header-meta');
+    if (meta && overlayCount > 0) {
+      const t = new Date(fetchedAt).toLocaleTimeString();
+      meta.innerHTML += ` | <span style="color:var(--accent);">&#9679;</span> HubSpot live (${overlayCount} buildings · ${t})`;
+    }
+
+    renderAll();
+  } catch (e) {
+    console.warn('HubSpot overlay failed (using cached data):', e);
+  }
+}
+
+// Init
+loadFromSheet().then(async () => {
+  renderAll();
+  await loadHubSpotOverlay();
+});
+
+// Auto-refresh from sheets + HubSpot
 if (USE_SHEET && AUTO_REFRESH_MINUTES > 0) {
   setInterval(async () => {
     await loadFromSheet();
-    renderAll();
+    await loadHubSpotOverlay();
   }, AUTO_REFRESH_MINUTES * 60 * 1000);
 }
 </script>

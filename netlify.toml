@@ -1,2 +1,8 @@
 [build]
   publish = "public"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/hubspot"
+  to = "/.netlify/functions/hubspot"
+  status = 200
