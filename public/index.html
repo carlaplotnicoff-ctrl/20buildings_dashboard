@@ -3,12 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>20 Buildings — War Room</title>
+    <title>20 Buildings — Pipeline Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+        window._sbClient = createClient(
+            'https://gapfldixgqpmlzwijftm.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhcGZsZGl4Z3FwbWx6d2lqZnRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNTQ3NTYsImV4cCI6MjA5MDYzMDc1Nn0.qf1cX1BacUwMuemFKd7WdUmZ4uDoJNJWnUWBp5fCT3U'
+        );
+        window.dispatchEvent(new Event('supabase-ready'));
+    </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -374,7 +379,7 @@
     <div class="orb orb-3"></div>
 
     <div class="top-bar">
-        <h1>☁ <span>20 Buildings</span> War Room</h1>
+        <h1>☁ <span>20 Buildings</span> Pipeline</h1>
         <div class="top-bar-right">
             <span class="conn-dot off" id="connDot"></span>
             <span class="conn-lbl" id="connLbl">Connecting…</span>
@@ -611,27 +616,39 @@
 
 <script>
 // =============================================================================
-// ===== FIREBASE CONFIG — paste yours here ====================================
-// =============================================================================
-const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-};
+// ===== DATA STORE: SUPABASE ==================================================
+// Required tables (run once in Supabase SQL editor):
+//
+// CREATE TABLE IF NOT EXISTS contacts (
+//   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+//   full_name text, first_name text, last_name text, job_title text,
+//   company text, email text, phone text, alt_phone text,
+//   building_name text, building_address text, total_units text,
+//   owner text, property_manager text, linkedin text,
+//   priority_tier integer DEFAULT 3, pain_point text,
+//   pct_available text, br2_plus_available text,
+//   landing_page_clicks numeric DEFAULT 0,
+//   contact_status text DEFAULT 'Not Contacted',
+//   last_touch_date text, total_touches integer DEFAULT 0,
+//   touch_channel text, right_asset_manager text, call_notes text,
+//   last_updated timestamptz, updated_by text
+// );
+//
+// CREATE TABLE IF NOT EXISTS touch_log (
+//   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+//   timestamp timestamptz, contact_id uuid, contact_name text,
+//   building_name text, channel text, outcome text,
+//   objections text, notes text, next_step text,
+//   next_step_date text, logged_by text
+// );
 // =============================================================================
 
 // ===== SUPABASE CONFIG =======================================================
 const SUPABASE_URL  = 'https://gapfldixgqpmlzwijftm.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhcGZsZGl4Z3FwbWx6d2lqZnRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNTQ3NTYsImV4cCI6MjA5MDYzMDc1Nn0.qf1cX1BacUwMuemFKd7WdUmZ4uDoJNJWnUWBp5fCT3U';
-window._sbClient = (typeof supabase !== 'undefined') ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
+// _sbClient is set by the ESM module in <head>
 // =============================================================================
 
-let db;
-try { firebase.initializeApp(firebaseConfig); db = firebase.database(); } catch(e) { console.warn('Firebase init:', e.message); }
 
 let contacts = {}, touchLog = {}, config = {
     contact_statuses: ["Not Contacted","Attempting","Reached – Warm","Proposal Sent","Reached – Cold","Gatekeeper Only","Wrong Contact","Hard No","Unsubscribed"],
@@ -649,19 +666,29 @@ function toast(msg, type='info') {
     setTimeout(() => t.remove(), 3500);
 }
 
-// Connection indicator
-if (db) db.ref('.info/connected').on('value', s => {
-    const on = s.val() === true;
-    document.getElementById('connDot').className = `conn-dot ${on?'on':'off'}`;
-    document.getElementById('connLbl').textContent = on ? 'Live' : 'Offline';
-});
+// Connection indicator — updated in setup() after ESM module fires
 
-// Firebase listeners
+// Supabase data loader
+async function loadAllData() {
+    if (!window._sbClient) return;
+    const [{ data: cData, error: cErr }, { data: tData, error: tErr }] = await Promise.all([
+        window._sbClient.from('contacts').select('*'),
+        window._sbClient.from('touch_log').select('*')
+    ]);
+    if (cErr) console.error('Contacts load error:', cErr.message);
+    if (tErr) console.error('Touch log load error:', tErr.message);
+    contacts = {};
+    (cData || []).forEach(c => { contacts[c.id] = c; });
+    touchLog = {};
+    (tData || []).forEach(t => { touchLog[t.id] = t; });
+    renderAll();
+}
+
 function setup() {
-    if (!db) return;
-    db.ref('contacts').on('value', s => { contacts = s.val() || {}; renderAll(); });
-    db.ref('touch_log').on('value', s => { touchLog = s.val() || {}; renderAll(); });
-    db.ref('config').on('value', s => { const c = s.val(); if(c) config = c; });
+    if (!window._sbClient) return;
+    document.getElementById('connDot').className = 'conn-dot on';
+    document.getElementById('connLbl').textContent = 'Live';
+    loadAllData();
 }
 
 function renderAll() { renderDash(); renderPipeline(); renderContacts(); }
@@ -981,10 +1008,13 @@ function renderPipeline() {
     if (el) el.addEventListener(el.tagName==='INPUT'?'input':'change', renderPipeline);
 });
 
-function moveContact(cid, newStatus) {
-    if (!db) { toast('Not connected','err'); return; }
-    db.ref(`contacts/${cid}`).update({ contact_status: newStatus, last_updated: new Date().toISOString(), updated_by: getUser() })
-      .then(() => toast(`Status → ${newStatus}`,'ok')).catch(e => toast('Error: '+e.message,'err'));
+async function moveContact(cid, newStatus) {
+    if (!window._sbClient) { toast('Not connected','err'); return; }
+    const { error } = await window._sbClient.from('contacts')
+        .update({ contact_status: newStatus, last_updated: new Date().toISOString(), updated_by: getUser() })
+        .eq('id', cid);
+    if (error) toast('Error: '+error.message,'err');
+    else { toast(`Status → ${newStatus}`,'ok'); loadAllData(); }
 }
 
 function showBldgContacts(bldgName) {
@@ -1094,8 +1124,8 @@ function openTouchM(cid) {
     openM('touchModal');
 }
 
-function submitTouch() {
-    if (!db) { toast('Not connected','err'); return; }
+async function submitTouch() {
+    if (!window._sbClient) { toast('Not connected','err'); return; }
     const cid     = document.getElementById('tmCid').value;
     const c       = contacts[cid];
     const channel = document.getElementById('tmChannel').value;
@@ -1132,11 +1162,12 @@ function submitTouch() {
     const contactUpdates = { last_touch_date: today, total_touches: currentTouches + 1, touch_channel: touchChan, last_updated: now, updated_by: getUser() };
     if (statusToSet) contactUpdates.contact_status = statusToSet;
 
-    Promise.all([
-        db.ref('touch_log').push(entry),
-        db.ref(`contacts/${cid}`).update(contactUpdates)
-    ]).then(() => { toast(`Logged: ${outcome}`,'ok'); closeM('touchModal'); })
-      .catch(e => toast('Error: '+e.message,'err'));
+    const [{ error: e1 }, { error: e2 }] = await Promise.all([
+        window._sbClient.from('touch_log').insert(entry),
+        window._sbClient.from('contacts').update(contactUpdates).eq('id', cid)
+    ]);
+    if (e1 || e2) toast('Error: '+(e1||e2).message,'err');
+    else { toast(`Logged: ${outcome}`,'ok'); closeM('touchModal'); loadAllData(); }
 }
 
 function openAddModal() {
@@ -1145,8 +1176,8 @@ function openAddModal() {
     openM('addModal');
 }
 
-function submitAdd() {
-    if (!db) { toast('Not connected','err'); return; }
+async function submitAdd() {
+    if (!window._sbClient) { toast('Not connected','err'); return; }
     const name = document.getElementById('anName').value.trim();
     const bldg = document.getElementById('anBldg').value.trim();
     if (!name || !bldg) { toast('Name and Building required','err'); return; }
@@ -1164,27 +1195,32 @@ function submitAdd() {
         last_touch_date:'', total_touches:0, touch_channel:'', right_asset_manager:'', call_notes:'',
         last_updated:new Date().toISOString(), updated_by:getUser()
     };
-    db.ref('contacts').push(contact).then(()=>{toast(`Added: ${name}`,'ok');closeM('addModal');}).catch(e=>toast('Error: '+e.message,'err'));
+    const { error } = await window._sbClient.from('contacts').insert(contact);
+    if (error) toast('Error: '+error.message,'err');
+    else { toast(`Added: ${name}`,'ok'); closeM('addModal'); loadAllData(); }
 }
 
-function delContact(cid) {
-    if (!db) return;
-    db.ref(`contacts/${cid}`).remove().then(()=>{toast('Deleted','info');closeDP();}).catch(e=>toast('Error: '+e.message,'err'));
+async function delContact(cid) {
+    if (!window._sbClient) return;
+    const { error } = await window._sbClient.from('contacts').delete().eq('id', cid);
+    if (error) toast('Error: '+error.message,'err');
+    else { toast('Deleted','info'); closeDP(); loadAllData(); }
 }
 
 // =============================================================================
 // CSV UPLOAD / EXPORT
 // =============================================================================
 function handleCSV(event) {
-    const file = event.target.files[0]; if(!file||!db) return;
+    const file = event.target.files[0]; if(!file||!window._sbClient) return;
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         const rows = parseCSV(e.target.result);
         if (!rows.length) { toast('No data in CSV','err'); return; }
         if (!confirm(`Import ${rows.length} contacts from "${file.name}"?`)) return;
-        const batch = {};
-        rows.forEach(row => { const key = db.ref('contacts').push().key; batch[`contacts/${key}`] = mapRow(row); });
-        db.ref().update(batch).then(()=>{toast(`Imported ${rows.length}`,'ok');event.target.value='';}).catch(e=>toast('Error: '+e.message,'err'));
+        const mapped = rows.map(r => mapRow(r));
+        const { error } = await window._sbClient.from('contacts').insert(mapped);
+        if (error) toast('Error: '+error.message,'err');
+        else { toast(`Imported ${rows.length}`,'ok'); event.target.value=''; loadAllData(); }
     };
     reader.readAsText(file);
 }
@@ -1498,22 +1534,22 @@ function saveSnapshot() {
 // INIT
 // =============================================================================
 function init() {
-    if (db) {
+    if (window._sbClient) {
         setup();
     } else {
         document.getElementById('kpiCards').innerHTML = `
             <div style="grid-column:1/-1;text-align:center;padding:36px">
                 <div style="font-size:2rem;margin-bottom:10px">🔌</div>
-                <h2 style="margin-bottom:8px;color:#1a1f36;font-size:1.1rem">Firebase Not Connected</h2>
-                <p style="color:#6b7280;font-size:0.88rem">Paste your Firebase config in the script section of this file.</p>
-                <p style="margin-top:8px;color:#9ca3af;font-size:0.82rem">See <strong>SETUP.md</strong> for instructions.</p>
+                <h2 style="margin-bottom:8px;color:#1a1f36;font-size:1.1rem">Supabase Not Connected</h2>
+                <p style="color:#6b7280;font-size:0.88rem">Check the SUPABASE_URL and SUPABASE_ANON values in this file.</p>
             </div>`;
     }
     const saved = localStorage.getItem('20b_user');
     if (saved) document.getElementById('curUser').value = saved;
     document.getElementById('curUser').addEventListener('change', () => localStorage.setItem('20b_user', getUser()));
 }
-init();
+// Guard against race condition: module may have already fired before listener registered
+if (window._sbClient) { init(); } else { window.addEventListener('supabase-ready', init); }
 </script>
 </body>
 </html>
