@@ -189,6 +189,7 @@
     <button class="filter-btn active" data-city="all">All</button>
     <button class="filter-btn" data-city="Houston">Houston</button>
     <button class="filter-btn" data-city="Chicago">Chicago</button>
+    <button class="filter-btn" data-city="Dallas">Dallas</button>
   </div>
   <div class="controls-row">
     <span class="controls-label">Stage</span>
@@ -445,6 +446,16 @@ const buildings = [
   {building_name:"The Fordham",city:"Chicago",owner:"The Fordham Company",owner_2:"",pm:"The Fordham Company",address:"25 E Superior St",units:244,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:5,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"DO NOT PITCH — Condos. 4 avail"},
   {building_name:"EMME",city:"Chicago",owner:"Hines (HGIT)",owner_2:"",pm:"Willowick Residential",address:"165 N Desplaines St",units:199,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:8,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"Hines pool. 0 enrolled. $1000 credit. 13 avail"},
   {building_name:"Seven 10 West",city:"Chicago",owner:"Steel City Management",owner_2:"Outlook Management",pm:"Luxury Living Chicago",address:"710 W Grand Ave",units:105,pp:null,stage:"ALREADY-CONTACTED",p1:0,p2:0,p3:0,p4:0,total:7,sequence:"",hubspot:"",batch:"Call-list 1.0/2.0",notes:"0 enrolled. 7 avail"},
+  {building_name:"Remi Downtown",city:"Dallas",owner:"Livbrook Capital",owner_2:"",pm:"",address:"Dallas TX",units:null,pp:5,stage:"FLAGGED",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Dallas Batch 1",notes:"Zero contacts — Livbrook Capital not pulled → Batch 2"},
+  {building_name:"The Statler Residences",city:"Dallas",owner:"Centurion American",owner_2:"",pm:"",address:"Dallas TX",units:null,pp:4,stage:"FLAGGED",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Dallas Batch 1",notes:"Zero contacts — Centurion American not pulled → Batch 2"},
+  {building_name:"East Quarter Residences",city:"Dallas",owner:"Loco Meletio SPV",owner_2:"",pm:"",address:"Dallas TX",units:null,pp:9,stage:"FLAGGED",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"",batch:"Dallas Batch 1",notes:"On hold — SPV ownership unresolved"},
+  {building_name:"Atelier",city:"Dallas",owner:"Daiwa House Texas",owner_2:"",pm:"",address:"1801 N Pearl St, Dallas TX 75201",units:null,pp:6,stage:"ENROLLED",p1:1,p2:0,p3:1,p4:1,total:3,sequence:"Dallas P1-P4",hubspot:"Enrolled",batch:"Dallas Batch 1",notes:"Partial — ZOM Living + Itochu missing → Batch 2. Check Adam Rose in HubSpot (possible Houston overlap)"},
+  {building_name:"The National",city:"Dallas",owner:"Todd Interests",owner_2:"",pm:"",address:"1401 Elm St, Dallas TX 75201",units:null,pp:10,stage:"ENROLLED",p1:1,p2:1,p3:3,p4:2,total:7,sequence:"Dallas P1-P4",hubspot:"Enrolled",batch:"Dallas Batch 1",notes:"Contacts shared with The Sinclair. Missing: Drever Capital + Moriah RE → Batch 2"},
+  {building_name:"The Drakestone",city:"Dallas",owner:"Headington Companies",owner_2:"",pm:"",address:"1309 Main St, Dallas TX 75202",units:null,pp:4,stage:"ENROLLED",p1:1,p2:0,p3:0,p4:2,total:3,sequence:"Dallas P1-P4",hubspot:"Enrolled",batch:"Dallas Batch 1",notes:"Thin coverage — hospitality co. Only 1 AM-adjacent contact"},
+  {building_name:"LTV Tower Apartments",city:"Dallas",owner:"HRI Properties",owner_2:"",pm:"",address:"Dallas TX",units:null,pp:0,stage:"DNC",p1:0,p2:0,p3:0,p4:0,total:0,sequence:"",hubspot:"Excluded",batch:"Dallas Batch 1",notes:"Skipped — PP=0"},
+  {building_name:"Main 3 Downtown",city:"Dallas",owner:"Sentinel Real Estate",owner_2:"",pm:"",address:"1415 Main St, Dallas TX 75202",units:null,pp:9,stage:"ENROLLED",p1:7,p2:0,p3:2,p4:2,total:11,sequence:"Dallas P1-P4",hubspot:"Enrolled",batch:"Dallas Batch 1",notes:"Covered. Strongest contact pool in batch"},
+  {building_name:"Peridot",city:"Dallas",owner:"WoodsCap",owner_2:"Mintwood Real Estate",pm:"",address:"1601 Elm St, Dallas TX 75201",units:null,pp:10,stage:"ENROLLED",p1:0,p2:2,p3:1,p4:1,total:4,sequence:"Dallas P1-P4",hubspot:"Enrolled",batch:"Dallas Batch 1",notes:"Covered. Two-owner structure (WoodsCap + Mintwood)"},
+  {building_name:"The Sinclair",city:"Dallas",owner:"Todd Interests",owner_2:"",pm:"",address:"405 N Ervay St, Dallas TX 75201",units:null,pp:8,stage:"ENROLLED",p1:1,p2:1,p3:3,p4:2,total:7,sequence:"Dallas P1-P4",hubspot:"Enrolled",batch:"Dallas Batch 1",notes:"Contacts shared with The National"},
 ];
 
 // DNC companies
