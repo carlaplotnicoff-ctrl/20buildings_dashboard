@@ -1548,7 +1548,8 @@ function init() {
     if (saved) document.getElementById('curUser').value = saved;
     document.getElementById('curUser').addEventListener('change', () => localStorage.setItem('20b_user', getUser()));
 }
-window.addEventListener('supabase-ready', init);
+// Guard against race condition: module may have already fired before listener registered
+if (window._sbClient) { init(); } else { window.addEventListener('supabase-ready', init); }
 </script>
 </body>
 </html>
