@@ -176,7 +176,7 @@
 <div style="padding: 0 32px 16px;">
   <div style="font-size: 12px; color: var(--text2); margin-bottom: 6px;">GOAL: 20 BUILDINGS SIGNED BY DEC 2026</div>
   <div class="progress-bar">
-    <div class="progress-fill" id="goal-progress" style="width: 1%;">0 / 20</div>
+    <div class="progress-fill" id="goal-progress" style="width: 4%;">0 / 20</div>
   </div>
 </div>
 
@@ -237,6 +237,7 @@
             <th>PP</th>
             <th>Stage</th>
             <th>Contacts</th>
+            <th>Replies</th>
             <th>Tier Split</th>
             <th>Batch</th>
             <th>Notes</th>
@@ -498,6 +499,7 @@ function stageBadge(stage) {
 }
 
 function tierBar(b) {
+  if (b.city === 'Chicago') return '<span style="color:var(--text2);font-size:11px;">N/A</span>';
   const t = b.p1 + b.p2 + b.p3 + b.p4;
   if (t === 0) return '<span style="color:var(--text2);font-size:11px;">—</span>';
   const pct = v => (v / t * 100).toFixed(0);
@@ -609,6 +611,7 @@ function renderBuildings() {
       <td>${b.pp != null ? b.pp : '<span class="note-flag">—</span>'}</td>
       <td>${stageBadge(b.stage)}</td>
       <td>${b.total || 0}</td>
+      <td>${b.replies > 0 ? `<span style="color:var(--green);font-weight:700;">${b.replies}</span>` : '<span style="color:var(--text2);">—</span>'}</td>
       <td>${tierBar(b)}</td>
       <td style="font-size:11px;color:var(--text2);">${b.batch}</td>
       <td style="font-size:11px;" class="${noteStyle(b.notes)}">${b.notes || ''}</td>
@@ -767,12 +770,23 @@ function renderTiers() {
   }).join('');
 }
 
+function renderGoal() {
+  const signed = buildings.filter(b => b.stage === 'SIGNED' || b.stage === 'Signed').length;
+  const pct = Math.min(Math.round((signed / 20) * 100), 100);
+  const el = document.getElementById('goal-progress');
+  if (el) {
+    el.style.width = Math.max(pct, 4) + '%';
+    el.textContent = `${signed} / 20`;
+  }
+}
+
 function renderAll() {
   renderKPIs();
   renderBuildings();
   renderCompanies();
   renderPipeline();
   renderTiers();
+  renderGoal();
 }
 
 // ============================================================
@@ -995,6 +1009,7 @@ async function loadHubSpotOverlay() {
       b.p2 = hs.p2;
       b.p3 = hs.p3;
       b.p4 = hs.p4;
+      b.replies = hs.replyCount || 0;
 
       // Advance stage if HubSpot shows higher engagement (never downgrade, never override terminal)
       if (!HS_TERMINAL.has(b.stage) && hs.hubspotStage) {

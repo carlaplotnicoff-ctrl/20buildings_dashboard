@@ -55,6 +55,7 @@ async function getAllContacts(token) {
     'hs_sequences_is_enrolled',
     'hs_sequences_actively_enrolled_count',
     'hs_latest_sequence_enrolled',
+    'hs_sales_email_last_replied', // set when contact replies to any tracked sales email
   ];
 
   const contacts = [];
@@ -104,7 +105,7 @@ function groupByBuilding(contacts) {
     if (!name) continue;
 
     if (!buildings[name]) {
-      buildings[name] = { total: 0, p1: 0, p2: 0, p3: 0, p4: 0, enrolled: 0, hubspotStage: null };
+      buildings[name] = { total: 0, p1: 0, p2: 0, p3: 0, p4: 0, enrolled: 0, replyCount: 0, hubspotStage: null };
     }
 
     const b = buildings[name];
@@ -119,6 +120,9 @@ function groupByBuilding(contacts) {
     const isEnrolled = p.hs_sequences_is_enrolled === 'true'
       || parseInt(p.hs_sequences_actively_enrolled_count || '0', 10) > 0;
     if (isEnrolled) b.enrolled++;
+
+    // Count contacts who have replied to a tracked sales email
+    if (p.hs_sales_email_last_replied) b.replyCount++;
   }
 
   // Derive suggested stage from enrollment data
