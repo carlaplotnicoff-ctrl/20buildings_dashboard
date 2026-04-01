@@ -1000,7 +1000,7 @@ async function loadHubSpotOverlay() {
 
     let overlayCount = 0;
     for (const b of buildings) {
-      const hs = hsData[b.building_name];
+      const hs = hsData[(b.building_name || '').trim().toLowerCase()];
       if (!hs) continue;
 
       // Overlay live contact counts

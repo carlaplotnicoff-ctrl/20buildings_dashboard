@@ -101,7 +101,8 @@ function groupByBuilding(contacts) {
   for (const contact of contacts) {
     const p = contact.properties;
     // Dallas/Houston use building_name; Chicago uses matching_buildings
-    const name = (p.building_name || p.matching_buildings || '').trim();
+    // Normalize to lowercase so "Parq Fulton" and "parq fulton" both match
+    const name = (p.building_name || p.matching_buildings || '').trim().toLowerCase();
     if (!name) continue;
 
     if (!buildings[name]) {
