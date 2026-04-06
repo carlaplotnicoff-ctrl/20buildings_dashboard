@@ -6,6 +6,7 @@
     <title>20 Buildings — Pipeline Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script type="module">
         import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
         window._sbClient = createClient(
@@ -19,7 +20,7 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #eef2ff 0%, #fafbff 45%, #f3f0ff 100%);
+            background: linear-gradient(135deg, #f0f4ff 0%, #fafbff 50%, #f4f0ff 100%);
             min-height: 100vh;
             color: #1a1f36;
             position: relative;
@@ -239,6 +240,7 @@
         .bs-soft      { background: rgba(245,158,11,0.12);  color: #d97706; }
         .bs-hard      { background: rgba(239,68,68,0.12);   color: #dc2626; }
         .bs-converted { background: rgba(16,185,129,0.20);  color: #047857; }
+        .bs-propout   { background: rgba(14,165,233,0.12);  color: #0ea5e9; }
 
         /* ===== FILTERS & TOOLBAR ===== */
         .controls {
@@ -388,6 +390,7 @@
                 <option value="Luisa">Luisa</option>
                 <option value="Marcus">Marcus</option>
             </select>
+            <button class="btn btn-s" onclick="openImportModal()" style="margin-left:10px;font-size:0.78rem;padding:6px 12px">+ Import Buildings</button>
         </div>
     </div>
 
@@ -448,7 +451,10 @@
     <!-- TAB 3: CONTACTS -->
     <div class="tab-content" id="tab-contacts">
         <div class="toolbar">
-            <input type="text" id="cSearch" placeholder="Search contacts…">
+            <input type="text" id="cSearch" placeholder="Search name, building, company…" oninput="renderContacts()">
+            <select id="cFilterStatus" onchange="renderContacts()"><option value="">All Statuses</option></select>
+            <select id="cFilterTier" onchange="renderContacts()"><option value="">All Tiers</option><option value="1">P1</option><option value="2">P2</option><option value="3">P3</option></select>
+            <select id="cFilterMarket" onchange="renderContacts()"><option value="">All Markets</option><option value="Chicago">Chicago</option><option value="Houston">Houston</option><option value="Dallas">Dallas</option></select>
             <button class="btn btn-p btn-sm" onclick="openAddModal()">+ Add Contact</button>
             <button class="btn btn-s btn-sm" onclick="document.getElementById('csvIn').click()">Upload CSV</button>
             <button class="btn btn-s btn-sm" onclick="exportCSV()">Export CSV</button>
@@ -463,82 +469,48 @@
     <!-- TAB 4: EMAIL OUTREACH -->
     <div class="tab-content" id="tab-outreach">
 
-        <!-- Header -->
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
             <div>
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
-                    <span id="hsSourceBadge"></span>
-                    <span id="hsLastUpdated" style="color:#9ca3af;font-size:0.72rem;font-weight:500"></span>
-                </div>
-                <h2 style="font-size:1.18rem;font-weight:700;color:#1a1f36;letter-spacing:-0.4px;margin:0">Email Sequence Performance</h2>
-                <p style="font-size:0.78rem;color:#6b7280;margin-top:3px">All active markets · HubSpot Sequences</p>
+                <h2 style="font-size:1.18rem;font-weight:700;color:#1a1f36;letter-spacing:-0.4px;margin:0">Email Outreach</h2>
+                <p style="font-size:0.78rem;color:#6b7280;margin-top:3px">Enrolled contacts per market · HubSpot Sequences</p>
             </div>
-            <div style="display:flex;gap:8px;align-items:center">
-                <button class="btn btn-s btn-sm" onclick="openSnapshotEditor()">Edit Snapshot</button>
-                <button class="btn btn-p btn-sm" onclick="refreshOutreachMetrics()">Refresh</button>
+            <span id="omLiveBadge" style="font-size:0.7rem;padding:3px 10px;border-radius:20px;font-weight:600;background:rgba(245,158,11,0.12);color:#d97706">⚠ Manual</span>
+        </div>
+
+        <!-- Enrolled count cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px" id="omEnrolledCards">
+            <div class="metric-card" style="text-align:left;padding:24px 28px">
+                <div class="mv mv-blue" id="omTotalEnrolled" style="font-size:2.4rem;letter-spacing:-1.5px">—</div>
+                <div class="ml" style="margin-top:6px">Total Enrolled</div>
+                <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px">contacts in sequence</div>
+            </div>
+            <div class="metric-card" style="text-align:left;padding:24px 28px;border-left:3px solid #4f7cff">
+                <div class="mv mv-blue" id="omChiEnrolled" style="font-size:2.4rem;letter-spacing:-1.5px">—</div>
+                <div class="ml" style="margin-top:6px">Chicago</div>
+                <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px">enrolled</div>
+            </div>
+            <div class="metric-card" style="text-align:left;padding:24px 28px;border-left:3px solid #10b981">
+                <div class="mv" id="omHouEnrolled" style="font-size:2.4rem;letter-spacing:-1.5px;color:#10b981">—</div>
+                <div class="ml" style="margin-top:6px">Houston</div>
+                <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px">enrolled</div>
             </div>
         </div>
 
-        <!-- 4 KPI Cards -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;margin-bottom:24px" id="omKpiCards"></div>
-
-        <!-- Chart left + Market cards right -->
-        <div class="two-col" style="align-items:start">
-            <div class="cc" style="margin-bottom:0">
-                <div class="ct">Open &amp; Reply Rate by Market</div>
-                <div class="cw short"><canvas id="omMarketChart"></canvas></div>
+        <!-- HubSpot token input -->
+        <div class="cc" style="max-width:520px">
+            <div class="ct">HubSpot Connection</div>
+            <p style="font-size:0.8rem;color:#6b7280;margin-bottom:16px">Enter your Private App token to pull enrolled counts live from HubSpot. Stored locally in your browser.</p>
+            <div style="display:flex;gap:10px;align-items:center">
+                <input type="password" id="hsTokenInput" placeholder="pat-na1-••••••••••••" style="flex:1;padding:9px 14px;border:1px solid #e5e7eb;border-radius:10px;font-family:inherit;font-size:0.82rem;color:#1a1f36;outline:none">
+                <button class="btn btn-p btn-sm" onclick="connectHsToken()">Connect</button>
+                <button class="btn btn-s btn-sm" onclick="clearHsToken()">Clear</button>
             </div>
-            <div style="display:flex;flex-direction:column;gap:14px" id="omMarketCards"></div>
+            <div id="hsTokenStatus" style="font-size:0.75rem;margin-top:8px;color:#9ca3af"></div>
         </div>
 
-        <div class="footnote" style="margin-top:16px">
-            Rates from HubSpot Sequences export &middot; Enrollment counts via HubSpot API &middot;
-            <a href="#" onclick="openSnapshotEditor();return false">Update snapshot</a>
-        </div>
+        <div class="footnote" style="margin-top:20px">Enrollment counts via HubSpot Contacts API · Open / reply / bounce rates not available from Sequences API</div>
     </div>
 
-    <!-- SNAPSHOT EDITOR MODAL -->
-    <div class="mo" id="snapshotModal">
-        <div class="modal" style="max-width:560px">
-            <h2>Update Outreach Snapshot</h2>
-            <p style="color:#6b7280;font-size:0.82rem;margin:-10px 0 18px">Paste the latest numbers from your HubSpot Sequences report.</p>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                <div class="mf"><label>Total Enrolled</label><input type="number" id="snEnrolled" placeholder="2004"></div>
-                <div class="mf"><label>Snapshot Date</label><input type="text" id="snDate" placeholder="Apr 1"></div>
-                <div class="mf"><label>Opens</label><input type="number" id="snOpens" placeholder="523"></div>
-                <div class="mf"><label>Open Rate %</label><input type="number" step="0.1" id="snOpenRate" placeholder="26.1"></div>
-                <div class="mf"><label>Replies</label><input type="number" id="snReplies" placeholder="51"></div>
-                <div class="mf"><label>Reply Rate %</label><input type="number" step="0.1" id="snReplyRate" placeholder="2.5"></div>
-                <div class="mf"><label>Bounces</label><input type="number" id="snBounces" placeholder="131"></div>
-                <div class="mf"><label>Bounce Rate %</label><input type="number" step="0.1" id="snBounceRate" placeholder="6.5"></div>
-            </div>
-
-            <div style="border-top:1px solid rgba(0,0,0,0.07);margin:16px 0;padding-top:16px">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
-                    <div>
-                        <div style="font-size:0.78rem;font-weight:700;color:#1a1f36;margin-bottom:10px">Chicago</div>
-                        <div class="mf"><label>Enrolled</label><input type="number" id="snChiEnrolled" placeholder="1128"></div>
-                        <div class="mf"><label>Open Rate %</label><input type="number" step="0.1" id="snChiOpenRate" placeholder="37.1"></div>
-                        <div class="mf"><label>Reply Rate %</label><input type="number" step="0.1" id="snChiReplyRate" placeholder="2.9"></div>
-                        <div class="mf"><label>Bounce Rate %</label><input type="number" step="0.1" id="snChiBounceRate" placeholder="4.3"></div>
-                    </div>
-                    <div>
-                        <div style="font-size:0.78rem;font-weight:700;color:#1a1f36;margin-bottom:10px">Houston</div>
-                        <div class="mf"><label>Enrolled</label><input type="number" id="snHouEnrolled" placeholder="876"></div>
-                        <div class="mf"><label>Open Rate %</label><input type="number" step="0.1" id="snHouOpenRate" placeholder="12.0"></div>
-                        <div class="mf"><label>Reply Rate %</label><input type="number" step="0.1" id="snHouReplyRate" placeholder="2.1"></div>
-                        <div class="mf"><label>Bounce Rate %</label><input type="number" step="0.1" id="snHouBounceRate" placeholder="9.5"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mactions">
-                <button class="btn btn-s" onclick="closeM('snapshotModal')">Cancel</button>
-                <button class="btn btn-p" onclick="saveSnapshot()">Save Snapshot</button>
-            </div>
-        </div>
-    </div>
 
     <!-- DETAIL PANEL -->
     <div class="dpanel" id="dp">
@@ -564,6 +536,7 @@
                 <option value="Not Interested">Not Interested</option>
                 <option value="Wrong Number">Wrong Number</option>
                 <option value="Call Back Later">Call Back Later</option>
+                <option value="Contract Signed">Contract Signed</option>
             </select></div>
             <div class="mf"><label>New Contact Status (optional)</label><select id="tmStatus">
                 <option value="">Keep current</option>
@@ -612,6 +585,62 @@
         </div>
     </div>
 
+    <!-- BUILDING IMPORT MODAL -->
+    <div class="mo" id="importModal">
+        <div class="modal" style="max-width:520px">
+            <h2>Import Buildings</h2>
+            <div class="mf">
+                <label>City *</label>
+                <input type="text" id="imCity" placeholder="e.g. Chicago, Houston, Dallas" list="imCityList">
+                <datalist id="imCityList">
+                    <option value="Chicago">
+                    <option value="Houston">
+                    <option value="Dallas">
+                </datalist>
+            </div>
+            <div class="mf">
+                <label>Data Source *</label>
+                <div style="display:flex;gap:16px;margin-top:4px">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
+                        <input type="radio" name="imSource" value="url" id="imSrcUrl" checked onchange="toggleImportSource()"> Google Sheet URL
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
+                        <input type="radio" name="imSource" value="file" id="imSrcFile" onchange="toggleImportSource()"> Upload CSV
+                    </label>
+                </div>
+            </div>
+            <div class="mf" id="imUrlRow">
+                <label>Published Google Sheet URL</label>
+                <input type="text" id="imUrl" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv">
+            </div>
+            <div class="mf" id="imFileRow" style="display:none">
+                <label>CSV File</label>
+                <input type="file" id="imFile" accept=".csv" style="font-size:0.85rem;padding:6px 0">
+            </div>
+            <div class="mf">
+                <label>Column Format</label>
+                <div style="display:flex;gap:16px;margin-top:4px">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
+                        <input type="radio" name="imFmt" value="auto" checked> Auto-detect
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
+                        <input type="radio" name="imFmt" value="houston"> Houston (ApartmentIQ)
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
+                        <input type="radio" name="imFmt" value="chicago"> Chicago
+                    </label>
+                </div>
+            </div>
+            <div id="imPreview" style="display:none;margin-top:12px;background:rgba(0,0,0,0.04);border-radius:8px;padding:12px;font-size:0.78rem;font-family:monospace;white-space:pre-wrap;max-height:160px;overflow-y:auto;color:#374151"></div>
+            <div id="imProgress" style="display:none;margin-top:10px;font-size:0.82rem;color:#4f7cff"></div>
+            <div class="mactions" style="margin-top:18px">
+                <button class="btn btn-s" onclick="closeM('importModal')">Cancel</button>
+                <button class="btn btn-s" onclick="previewImportSheet()" style="margin-left:auto">Preview rows</button>
+                <button class="btn btn-p" id="imRunBtn" onclick="runBuildingImport()" disabled>Run Import</button>
+            </div>
+        </div>
+    </div>
+
     <div class="toasts" id="toasts"></div>
 
 <script>
@@ -652,7 +681,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 
 let contacts = {}, touchLog = {}, config = {
     contact_statuses: ["Not Contacted","Attempting","Reached – Warm","Proposal Sent","Reached – Cold","Gatekeeper Only","Wrong Contact","Hard No","Unsubscribed"],
-    building_statuses: ["Active","Paused – Unresponsive","Paused – No Decision Maker","In Conversation","Meeting Booked","Soft Rejection","Hard Rejection","Converted"],
+    building_statuses: ["Active","Paused – Unresponsive","Paused – No Decision Maker","In Conversation","Proposal Out","Meeting Booked","Soft Rejection","Hard Rejection","Converted"],
     team_members: ["Carla","Luisa","Marcus"],
     park_threshold_touches: 6,
     park_threshold_days: 10
@@ -671,9 +700,10 @@ function toast(msg, type='info') {
 // Supabase data loader
 async function loadAllData() {
     if (!window._sbClient) return;
-    const [{ data: cData, error: cErr }, { data: tData, error: tErr }] = await Promise.all([
+    const [{ data: cData, error: cErr }, { data: tData, error: tErr }, { data: bData }] = await Promise.all([
         window._sbClient.from('contacts').select('*'),
-        window._sbClient.from('touch_log').select('*')
+        window._sbClient.from('touch_log').select('*'),
+        window._sbClient.from('campaign_buildings').select('*')
     ]);
     if (cErr) console.error('Contacts load error:', cErr.message);
     if (tErr) console.error('Touch log load error:', tErr.message);
@@ -681,6 +711,7 @@ async function loadAllData() {
     (cData || []).forEach(c => { contacts[c.id] = c; });
     touchLog = {};
     (tData || []).forEach(t => { touchLog[t.id] = t; });
+    window._buildings = Object.fromEntries((bData || []).map(b => [b.building_name, b]));
     renderAll();
 }
 
@@ -711,7 +742,7 @@ function sClass(s) {
     return m[s]||'s-nc';
 }
 function bsClass(s) {
-    const m = {'Active':'bs-active','Paused – Unresponsive':'bs-paused','Paused – No Decision Maker':'bs-nodm','In Conversation':'bs-inconvo','Meeting Booked':'bs-meeting','Soft Rejection':'bs-soft','Hard Rejection':'bs-hard','Converted':'bs-converted'};
+    const m = {'Active':'bs-active','Paused – Unresponsive':'bs-paused','Paused – No Decision Maker':'bs-nodm','In Conversation':'bs-inconvo','Proposal Out':'bs-propout','Meeting Booked':'bs-meeting','Soft Rejection':'bs-soft','Hard Rejection':'bs-hard','Converted':'bs-converted'};
     return m[s]||'bs-active';
 }
 function pClass(t) { const n=parseInt(t)||3; return n===1?'bp1':n===2?'bp2':'bp3'; }
@@ -721,15 +752,19 @@ function pLabel(t) { const n=parseInt(t)||3; return 'P'+n; }
 function deriveBuildingStatus(buildingContacts, buildingTouches) {
     if (!buildingContacts.length) return 'Active';
     const statuses = buildingContacts.map(c => c.contact_status || 'Not Contacted');
-    const hasMeeting = buildingTouches.some(t => t.outcome === 'Meeting Booked');
-    const hasHardNo  = statuses.includes('Hard No') || statuses.includes('Unsubscribed');
-    const hasWarm    = statuses.includes('Reached – Warm');
-    const hasCold    = statuses.includes('Reached – Cold');
-    const hasGK      = statuses.some(s => s === 'Gatekeeper Only' || s === 'Wrong Contact');
-    if (hasMeeting) return 'Meeting Booked';
-    if (hasHardNo)  return 'Hard Rejection';
-    if (hasWarm)    return 'In Conversation';
-    if (hasCold)    return 'Soft Rejection';
+    const hasContract = buildingTouches.some(t => t.outcome === 'Contract Signed');
+    const hasMeeting  = buildingTouches.some(t => t.outcome === 'Meeting Booked');
+    const hasHardNo   = statuses.includes('Hard No') || statuses.includes('Unsubscribed');
+    const hasWarm     = statuses.includes('Reached – Warm');
+    const hasCold     = statuses.includes('Reached – Cold');
+    const hasGK       = statuses.some(s => s === 'Gatekeeper Only' || s === 'Wrong Contact');
+    const hasProposal = statuses.includes('Proposal Sent');
+    if (hasContract)  return 'Converted';
+    if (hasMeeting)   return 'Meeting Booked';
+    if (hasHardNo)    return 'Hard Rejection';
+    if (hasProposal)  return 'Proposal Out';
+    if (hasWarm)      return 'In Conversation';
+    if (hasCold)      return 'Soft Rejection';
     const allAttempting = statuses.every(s => s === 'Attempting' || s === 'Not Contacted');
     if (allAttempting && buildingContacts.some(c => c.contact_status === 'Attempting')) {
         const lastDates = buildingContacts.map(c => c.last_touch_date).filter(Boolean);
@@ -782,19 +817,16 @@ function renderDash() {
     const mondayStr = monday.toISOString().substring(0,10);
     const touchesThisWeek = logs.filter(t => (t.timestamp||'').substring(0,10) >= mondayStr).length;
 
-    const convos   = logs.filter(t => t.outcome === 'Conversation' || t.outcome === 'Meeting Booked' || t.outcome === 'Email Reply').length;
-    const meetings = logs.filter(t => t.outcome === 'Meeting Booked').length;
-    const convRate = logs.length > 0 ? Math.round(convos / logs.length * 100) : 0;
-    const buildings = Object.keys(bData).length;
+    const bldgsInPipeline  = Object.keys(bData).length;
+    const convertedBldgs   = Object.values(bData).filter(b => b.status === 'Converted').length;
+    const conversionPct    = bldgsInPipeline > 0 ? Math.round(convertedBldgs / bldgsInPipeline * 100) : 0;
 
     document.getElementById('kpiCards').innerHTML = `
-        <div class="metric-card"><div class="mv mv-blue">${total}</div><div class="ml">Contacts</div></div>
+        <div class="metric-card"><div class="mv mv-blue">${total.toLocaleString()}</div><div class="ml">Total Contacts</div></div>
         <div class="metric-card"><div class="mv ${touchesToday>0?'mv-green':'mv-orange'}">${touchesToday}</div><div class="ml">Touches Today</div></div>
         <div class="metric-card"><div class="mv ${touchesThisWeek>=300?'mv-green':'mv-orange'}">${touchesThisWeek}/300</div><div class="ml">This Week</div></div>
-        <div class="metric-card"><div class="mv mv-blue">${convos}</div><div class="ml">Conversations</div></div>
-        <div class="metric-card"><div class="mv mv-green">${meetings}</div><div class="ml">Meetings</div></div>
-        <div class="metric-card"><div class="mv mv-blue">${convRate}%</div><div class="ml">Conv. Rate</div></div>
-        <div class="metric-card"><div class="mv mv-blue">${buildings}</div><div class="ml">Buildings</div></div>
+        <div class="metric-card"><div class="mv" style="color:#7c3aed">${bldgsInPipeline}</div><div class="ml">Buildings in Pipeline</div></div>
+        <div class="metric-card"><div class="mv mv-green">${conversionPct}%</div><div class="ml">Conversion %</div></div>
     `;
 
     // Funnel
@@ -881,7 +913,7 @@ function renderBldgStatusChart(bData) {
     const colorMap = {
         'Active':'#4f7cff','Paused – Unresponsive':'#9ca3af',
         'Paused – No Decision Maker':'#7c3aed','In Conversation':'#10b981',
-        'Meeting Booked':'#047857','Soft Rejection':'#f59e0b',
+        'Proposal Out':'#0ea5e9','Meeting Booked':'#047857','Soft Rejection':'#f59e0b',
         'Hard Rejection':'#ef4444','Converted':'#10b981'
     };
     const colors = labels.map(s => colorMap[s]||'#9ca3af');
@@ -904,7 +936,7 @@ function renderBldgStatusChart(bData) {
 
 function renderBldgTable(bData) {
     const sorted = Object.values(bData).sort((a,b) => {
-        const order = ['Meeting Booked','In Conversation','Active','Soft Rejection','Paused – Unresponsive','Paused – No Decision Maker','Hard Rejection','Converted'];
+        const order = ['Meeting Booked','Proposal Out','In Conversation','Active','Soft Rejection','Paused – Unresponsive','Paused – No Decision Maker','Hard Rejection','Converted'];
         return order.indexOf(a.status)-order.indexOf(b.status);
     });
     document.getElementById('bldgTableBody').innerHTML = sorted.map(b=>`<tr>
@@ -970,7 +1002,7 @@ function renderPipeline() {
         inStatus.sort((a,b)=>(a.priority_tier||3)-(b.priority_tier||3)).forEach(c => {
             const card = document.createElement('div'); card.className = 'kcard'; card.draggable = true;
             const touches = parseInt(c.total_touches)||0;
-            card.innerHTML = `<div class="cn">${c.full_name||'?'}</div><div class="cb">${c.building_name||''}</div>${c.phone?`<div class="cp">${c.phone}</div>`:''}<div class="meta"><span class="badge ${pClass(c.priority_tier)}">${pLabel(c.priority_tier)}</span>${touches?`<span class="badge btouch">${touches} touch${touches>1?'es':''}</span>`:''}</div>`;
+            card.innerHTML = `<div class="cn">${c.full_name||'?'}</div><div class="cb">${c.building_name||''}</div>${c.company?`<div class="cp" style="color:#9ca3af">${c.company}</div>`:''}<div class="meta"><span class="badge ${pClass(c.priority_tier)}">${pLabel(c.priority_tier)}</span>${touches?`<span class="badge btouch">${touches} touch${touches>1?'es':''}</span>`:''}</div>`;
             card.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain',c.id); card.classList.add('dragging'); });
             card.addEventListener('dragend',   () => card.classList.remove('dragging'));
             card.addEventListener('click',     () => openDP(c.id));
@@ -1028,9 +1060,21 @@ function showBldgContacts(bldgName) {
 // =============================================================================
 function renderContacts() {
     const arr = cArr();
-    const search = (document.getElementById('cSearch')?.value||'').toLowerCase();
+    const search  = (document.getElementById('cSearch')?.value||'').toLowerCase();
+    const fStatus = (document.getElementById('cFilterStatus')?.value||'');
+    const fTier   = (document.getElementById('cFilterTier')?.value||'');
+    const fMarket = (document.getElementById('cFilterMarket')?.value||'');
     let filtered = arr;
-    if (search) filtered = filtered.filter(c => (c.full_name||'').toLowerCase().includes(search)||(c.building_name||'').toLowerCase().includes(search)||(c.company||'').toLowerCase().includes(search)||(c.email||'').toLowerCase().includes(search));
+    if (search)  filtered = filtered.filter(c => (c.full_name||'').toLowerCase().includes(search)||(c.building_name||'').toLowerCase().includes(search)||(c.company||'').toLowerCase().includes(search)||(c.email||'').toLowerCase().includes(search));
+    if (fStatus) filtered = filtered.filter(c => (c.contact_status||'Not Contacted') === fStatus);
+    if (fTier)   filtered = filtered.filter(c => String(c.priority_tier||3) === fTier);
+    if (fMarket) filtered = filtered.filter(c => (c.market || '') === fMarket);
+    // Populate status filter options dynamically
+    const statusSel = document.getElementById('cFilterStatus');
+    if (statusSel && statusSel.options.length === 1) {
+        config.contact_statuses.forEach(s => { const o = new Option(s,s); statusSel.appendChild(o); });
+    }
+    if (fStatus) statusSel.value = fStatus;
     filtered.sort((a,b) => (a.priority_tier||3)-(b.priority_tier||3));
 
     document.getElementById('cTableBody').innerHTML = filtered.map(c => `<tr>
@@ -1151,6 +1195,7 @@ async function submitTouch() {
         if (outcome === 'Conversation' || outcome === 'Email Reply') {
             if (cur !== 'Reached – Warm') statusToSet = 'Reached – Warm';
         }
+        if (outcome === 'Contract Signed') statusToSet = 'Reached – Warm';
     }
 
     const currentTouches = parseInt(c?.total_touches || 0);
@@ -1256,6 +1301,7 @@ function mapRow(row) {
         br2_plus_available:row['BR2_Plus_Available']||'',
         landing_page_clicks:parseFloat(row['Landing_Page_Clicks']||'0')||0,
         contact_status:row['contact_status']||'Not Contacted',
+        market:row['Market']||row['market']||'',
         last_touch_date:row['last_touch_date']||'', total_touches:parseInt(row['total_touches']||'0')||0,
         touch_channel:row['touch_channel']||'', right_asset_manager:row['right_asset_manager']||'',
         call_notes:row['call_notes']||row['CALL NOTES']||'',
@@ -1275,23 +1321,34 @@ function exportCSV() {
 }
 
 // =============================================================================
-// EMAIL OUTREACH — HubSpot API + Supabase Events
+// EMAIL OUTREACH — Enrolled counts only (HubSpot token optional)
 // =============================================================================
-const HUBSPOT_CONFIG = { cacheTTL: 3600, cacheKey: '20b_outreach_cache' };
-
-const OUTREACH_SNAPSHOT = {
-    source: 'snapshot', snapshotDate: 'Mar 24',
-    total: { enrolled:2004, opens:523, openRate:26.1, replies:51, replyRate:2.5, bounces:131, bounceRate:6.5 },
-    markets: [
-        { name:'Chicago', enrolled:1128, opens:419, openRate:37.1, replies:33, replyRate:2.9, bounces:48,  bounceRate:4.3 },
-        { name:'Houston', enrolled:876,  opens:105, openRate:12.0, replies:18, replyRate:2.1, bounces:83,  bounceRate:9.5 }
-    ]
-};
-
 function getHsToken()  { return localStorage.getItem('20b_hs_token') || ''; }
-function saveHsToken(v) {
-    if (v && v !== '•••••••••••') localStorage.setItem('20b_hs_token', v);
-    else if (!v) localStorage.removeItem('20b_hs_token');
+
+function connectHsToken() {
+    const input = document.getElementById('hsTokenInput');
+    const val = (input.value || '').trim();
+    if (!val || val === '•••••••••••') { toast('Enter a valid token first', 'err'); return; }
+    localStorage.setItem('20b_hs_token', val);
+    input.value = '';
+    document.getElementById('hsTokenStatus').textContent = '✓ Token saved';
+    document.getElementById('hsTokenStatus').style.color = '#10b981';
+    loadOutreachTab();
+}
+
+function clearHsToken() {
+    localStorage.removeItem('20b_hs_token');
+    document.getElementById('hsTokenInput').value = '';
+    document.getElementById('hsTokenStatus').textContent = 'Token cleared';
+    document.getElementById('hsTokenStatus').style.color = '#9ca3af';
+    setEnrolled('—', '—', '—');
+}
+
+function setEnrolled(total, chi, hou) {
+    const fmt = v => (v === '—' || v == null) ? '—' : Number(v).toLocaleString();
+    document.getElementById('omTotalEnrolled').textContent = fmt(total);
+    document.getElementById('omChiEnrolled').textContent   = fmt(chi);
+    document.getElementById('omHouEnrolled').textContent   = fmt(hou);
 }
 
 async function hsSearch(token, filters) {
@@ -1305,229 +1362,252 @@ async function hsSearch(token, filters) {
     return (await r.json()).total || 0;
 }
 
-async function fetchOutreachMetrics() {
-    const badge = document.getElementById('hsSourceBadge');
-    badge.textContent = 'Loading…';
-    badge.style.cssText = 'background:rgba(107,114,128,0.10);color:#6b7280;font-size:0.7rem;padding:3px 10px;border-radius:5px;font-weight:600';
+async function loadOutreachTab() {
+    const token = getHsToken();
+    const statusEl = document.getElementById('hsTokenStatus');
+    const badge    = document.getElementById('omLiveBadge');
+
+    if (!token) {
+        statusEl.textContent = 'No token — enter one above to pull live counts';
+        statusEl.style.color = '#9ca3af';
+        setEnrolled('—', '—', '—');
+        return;
+    }
+
+    statusEl.textContent = 'Fetching…';
+    statusEl.style.color = '#6b7280';
 
     try {
-        // Pull email events from Supabase (no HubSpot token needed)
-        let sbEvents = [];
-        if (window._sbClient) {
-            const { data, error } = await window._sbClient
-                .from('hs_email_events')
-                .select('event_type, market');
-            if (!error) sbEvents = data || [];
-        }
-        const count = (type, city) => sbEvents.filter(e => e.event_type === type && (!city || e.market === city)).length;
-
-        // Enrolled counts from HubSpot contacts API (still works great)
-        let tot_en = 0, chi_en = 0, hou_en = 0;
-        const token = getHsToken();
-        if (token) {
-            const ef = { propertyName:'hs_sequences_enrolled_count', operator:'GT', value:'0' };
-            try {
-                [tot_en, chi_en, hou_en] = await Promise.all([
-                    hsSearch(token, [ef]),
-                    hsSearch(token, [ef, { propertyName:'city', operator:'EQ', value:'Chicago' }]),
-                    hsSearch(token, [ef, { propertyName:'city', operator:'EQ', value:'Houston' }])
-                ]);
-            } catch(hsErr) { toast('HubSpot enrolled count failed: '+hsErr.message, 'err'); }
-        }
-
-        const rate = (n, d) => d > 0 ? +((n / d) * 100).toFixed(1) : null;
-
-        // Fall back to snapshot if no live data at all
-        if (!sbEvents.length && !token) { renderOutreachTab(OUTREACH_SNAPSHOT); return; }
-
-        const result = {
-            source: 'live', fetchedAt: Date.now(),
-            total: {
-                enrolled: tot_en,
-                opens:   count('open'),   openRate:   rate(count('open'),   tot_en),
-                replies: count('reply'),  replyRate:  rate(count('reply'),  tot_en),
-                bounces: count('bounce'), bounceRate: rate(count('bounce'), tot_en)
-            },
-            markets: [['Chicago', chi_en], ['Houston', hou_en]].map(([city, en]) => ({
-                name: city, enrolled: en,
-                opens:   count('open',   city), openRate:   rate(count('open',   city), en),
-                replies: count('reply',  city), replyRate:  rate(count('reply',  city), en),
-                bounces: count('bounce', city), bounceRate: rate(count('bounce', city), en)
-            }))
-        };
-
-        localStorage.setItem(HUBSPOT_CONFIG.cacheKey, JSON.stringify(result));
-        renderOutreachTab(result);
-        toast('Outreach data loaded', 'ok');
-
-    } catch(e) {
-        toast('Metrics fetch failed: '+e.message, 'err');
-        const cached = localStorage.getItem(HUBSPOT_CONFIG.cacheKey);
-        renderOutreachTab(cached ? { ...JSON.parse(cached), source:'cached' } : OUTREACH_SNAPSHOT);
-    }
-}
-
-let omChart = null;
-
-function renderOutreachTab(data) {
-    const t = data.total;
-    const fmtRate = r => (r != null) ? r+'%' : '—';
-    const fmtNum  = n => (n != null) ? Number(n).toLocaleString() : '—';
-
-    // Source badge
-    const badge     = document.getElementById('hsSourceBadge');
-    const lastUpdEl = document.getElementById('hsLastUpdated');
-    if (data.source === 'live') {
+        const ef = { propertyName:'hs_sequences_enrolled_count', operator:'GT', value:'0' };
+        const [tot, chi, hou] = await Promise.all([
+            hsSearch(token, [ef]),
+            hsSearch(token, [ef, { propertyName:'city', operator:'EQ', value:'Chicago' }]),
+            hsSearch(token, [ef, { propertyName:'city', operator:'EQ', value:'Houston'  }])
+        ]);
+        setEnrolled(tot, chi, hou);
         badge.textContent = '● Live';
-        badge.style.cssText = 'background:rgba(16,185,129,0.12);color:#059669;font-size:0.7rem;padding:3px 10px;border-radius:20px;font-weight:600;letter-spacing:0.2px';
-        lastUpdEl.textContent = 'Updated just now';
-    } else if (data.source === 'cached') {
-        const mins = Math.floor((Date.now() - (data.fetchedAt||0)) / 60000);
-        badge.textContent = '◌ Cached';
-        badge.style.cssText = 'background:rgba(79,124,255,0.12);color:#4f7cff;font-size:0.7rem;padding:3px 10px;border-radius:20px;font-weight:600;letter-spacing:0.2px';
-        lastUpdEl.textContent = `${mins} min${mins!==1?'s':''} ago`;
-    } else {
-        badge.textContent = `Snapshot · ${data.snapshotDate||'Mar 24'}`;
-        badge.style.cssText = 'background:rgba(245,158,11,0.12);color:#d97706;font-size:0.7rem;padding:3px 10px;border-radius:20px;font-weight:600;letter-spacing:0.2px';
-        lastUpdEl.textContent = 'Click "Edit Snapshot" to update with the latest HubSpot export';
-    }
-
-    // 4 KPI Cards — left-aligned, big number + sub-value
-    document.getElementById('omKpiCards').innerHTML = `
-        <div class="metric-card" style="text-align:left;padding:20px 22px">
-            <div class="mv mv-blue" style="font-size:2.1rem;letter-spacing:-1.5px">${fmtNum(t.enrolled)}</div>
-            <div class="ml" style="margin-top:6px">Total Enrolled</div>
-            <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px">contacts in sequence</div>
-        </div>
-        <div class="metric-card" style="text-align:left;padding:20px 22px">
-            <div class="mv mv-green" style="font-size:2.1rem;letter-spacing:-1.5px">${fmtRate(t.openRate)}</div>
-            <div class="ml" style="margin-top:6px">Open Rate</div>
-            <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px">${fmtNum(t.opens)} contacts opened</div>
-        </div>
-        <div class="metric-card" style="text-align:left;padding:20px 22px">
-            <div class="mv" style="font-size:2.1rem;letter-spacing:-1.5px;color:#7c3aed">${fmtRate(t.replyRate)}</div>
-            <div class="ml" style="margin-top:6px">Reply Rate</div>
-            <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px">${fmtNum(t.replies)} replied</div>
-        </div>
-        <div class="metric-card" style="text-align:left;padding:20px 22px">
-            <div class="mv mv-red" style="font-size:2.1rem;letter-spacing:-1.5px">${fmtRate(t.bounceRate)}</div>
-            <div class="ml" style="margin-top:6px">Bounce Rate</div>
-            <div style="font-size:0.72rem;color:#9ca3af;margin-top:4px">${fmtNum(t.bounces)} bounced</div>
-        </div>
-    `;
-
-    // Chart.js grouped bar — market open & reply rate comparison
-    if (data.markets && data.markets.length) {
-        const ctx = document.getElementById('omMarketChart');
-        if (ctx) {
-            if (omChart) { omChart.destroy(); omChart = null; }
-            const mNames  = data.markets.map(m => m.name);
-            const opens   = data.markets.map(m => m.openRate  || 0);
-            const replies = data.markets.map(m => m.replyRate || 0);
-            const bounces = data.markets.map(m => m.bounceRate|| 0);
-            omChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: mNames,
-                    datasets: [
-                        { label: 'Open Rate',   data: opens,   backgroundColor: 'rgba(16,185,129,0.72)', borderRadius: 6, barPercentage: 0.55 },
-                        { label: 'Reply Rate',  data: replies, backgroundColor: 'rgba(124,58,237,0.65)', borderRadius: 6, barPercentage: 0.55 },
-                        { label: 'Bounce Rate', data: bounces, backgroundColor: 'rgba(239,68,68,0.55)',  borderRadius: 6, barPercentage: 0.55 }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { boxWidth: 10, padding: 18, font: { size: 11, family: 'Inter, sans-serif' }, color: '#4b5563' } },
-                        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.raw}%` } }
-                    },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 12, weight: '600' } } },
-                        y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#9ca3af', font: { size: 11 }, callback: v => v+'%' }, beginAtZero: true }
-                    }
-                }
-            });
-        }
-
-        // Market cards with pill header + rate bars
-        const mAccent = ['#4f7cff', '#10b981', '#f59e0b', '#7c3aed'];
-        document.getElementById('omMarketCards').innerHTML = data.markets.map((m, i) => `
-            <div class="cc" style="margin-bottom:0;border-left:3px solid ${mAccent[i%mAccent.length]}">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-                    <div>
-                        <div style="font-size:0.95rem;font-weight:700;color:#1a1f36">${m.name}</div>
-                        <div style="font-size:0.72rem;color:#9ca3af;margin-top:1px">${fmtNum(m.enrolled)} enrolled</div>
-                    </div>
-                    <div style="font-size:1.6rem;font-weight:700;color:${mAccent[i%mAccent.length]};letter-spacing:-1px">${fmtRate(m.openRate)}</div>
-                </div>
-                ${[['Open Rate',m.openRate,'#10b981'],['Reply Rate',m.replyRate,'#7c3aed'],['Bounce Rate',m.bounceRate,'#ef4444']].map(([label,rate,color]) => `
-                    <div style="margin-bottom:10px">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                            <span style="font-size:0.75rem;color:#6b7280;font-weight:500">${label}</span>
-                            <span style="font-size:0.8rem;font-weight:700;color:${color}">${fmtRate(rate)}</span>
-                        </div>
-                        <div style="width:100%;height:5px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden">
-                            <div style="width:${Math.min(rate||0,100)}%;height:100%;background:${color};border-radius:3px;transition:width 0.6s ease;opacity:0.8"></div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `).join('');
-    } else {
-        document.getElementById('omMarketCards').innerHTML = '<div class="no-data">No market data — add via Edit Snapshot</div>';
+        badge.style.background = 'rgba(16,185,129,0.12)';
+        badge.style.color = '#059669';
+        statusEl.textContent = '✓ Updated just now';
+        statusEl.style.color = '#10b981';
+    } catch(e) {
+        statusEl.textContent = 'Error: ' + e.message;
+        statusEl.style.color = '#ef4444';
+        toast('HubSpot fetch failed: ' + e.message, 'err');
     }
 }
 
-function loadOutreachTab() {
-    // 1. Show live cache if fresh
-    const cached = localStorage.getItem(HUBSPOT_CONFIG.cacheKey);
-    if (cached) {
-        const data = JSON.parse(cached);
-        if ((Date.now() - (data.fetchedAt||0)) / 1000 < HUBSPOT_CONFIG.cacheTTL) {
-            renderOutreachTab({ ...data, source:'cached' });
-            return;
-        }
-    }
-    // 2. Custom snapshot saved via Edit Snapshot modal
-    const customSnap = localStorage.getItem('20b_snapshot_custom');
-    if (customSnap) { renderOutreachTab(JSON.parse(customSnap)); return; }
-    // 3. Try live fetch, fall back to built-in snapshot
-    fetchOutreachMetrics();
+// =============================================================================
+// BUILDING IMPORT MODAL
+// =============================================================================
+
+let _imParsedData = null;
+let _imHeaders = null;
+
+function openImportModal() {
+    _imParsedData = null; _imHeaders = null;
+    document.getElementById('imCity').value = '';
+    document.getElementById('imUrl').value = '';
+    document.getElementById('imFile').value = '';
+    document.getElementById('imPreview').style.display = 'none';
+    document.getElementById('imProgress').style.display = 'none';
+    document.getElementById('imRunBtn').disabled = true;
+    document.getElementById('imSrcUrl').checked = true;
+    toggleImportSource();
+    openM('importModal');
 }
 
-function refreshOutreachMetrics() { fetchOutreachMetrics(); }
-
-function openSnapshotEditor() {
-    const snap = JSON.parse(localStorage.getItem('20b_snapshot_custom') || JSON.stringify(OUTREACH_SNAPSHOT));
-    const t = snap.total || {};
-    const setVal = (id, v) => { const el = document.getElementById(id); if(el && v != null) el.value = v; };
-    setVal('snEnrolled',  t.enrolled);   setVal('snOpens',     t.opens);
-    setVal('snOpenRate',  t.openRate);   setVal('snReplies',   t.replies);
-    setVal('snReplyRate', t.replyRate);  setVal('snBounces',   t.bounces);
-    setVal('snBounceRate',t.bounceRate); setVal('snDate', snap.snapshotDate||'');
-    const mkts = snap.markets || [];
-    if (mkts[0]) { setVal('snChiEnrolled',mkts[0].enrolled); setVal('snChiOpenRate',mkts[0].openRate); setVal('snChiReplyRate',mkts[0].replyRate); setVal('snChiBounceRate',mkts[0].bounceRate); }
-    if (mkts[1]) { setVal('snHouEnrolled',mkts[1].enrolled); setVal('snHouOpenRate',mkts[1].openRate); setVal('snHouReplyRate',mkts[1].replyRate); setVal('snHouBounceRate',mkts[1].bounceRate); }
-    openM('snapshotModal');
+function toggleImportSource() {
+    const isUrl = document.getElementById('imSrcUrl').checked;
+    document.getElementById('imUrlRow').style.display = isUrl ? '' : 'none';
+    document.getElementById('imFileRow').style.display = isUrl ? 'none' : '';
 }
 
-function saveSnapshot() {
-    const g = id => { const el = document.getElementById(id); return el ? parseFloat(el.value)||0 : 0; };
-    const gs = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-    const chiE = g('snChiEnrolled'), houE = g('snHouEnrolled');
-    const snap = {
-        source: 'snapshot',
-        snapshotDate: gs('snDate') || 'Custom',
-        total: { enrolled:g('snEnrolled'), opens:g('snOpens'), openRate:g('snOpenRate'), replies:g('snReplies'), replyRate:g('snReplyRate'), bounces:g('snBounces'), bounceRate:g('snBounceRate') },
-        markets: [
-            { name:'Chicago', enrolled:chiE, opens:Math.round(chiE*(g('snChiOpenRate')/100)), openRate:g('snChiOpenRate'), replies:Math.round(chiE*(g('snChiReplyRate')/100)), replyRate:g('snChiReplyRate'), bounces:Math.round(chiE*(g('snChiBounceRate')/100)), bounceRate:g('snChiBounceRate') },
-            { name:'Houston', enrolled:houE, opens:Math.round(houE*(g('snHouOpenRate')/100)), openRate:g('snHouOpenRate'), replies:Math.round(houE*(g('snHouReplyRate')/100)), replyRate:g('snHouReplyRate'), bounces:Math.round(houE*(g('snHouBounceRate')/100)), bounceRate:g('snHouBounceRate') }
-        ]
+function detectImportFormat(headers) {
+    if (headers.includes('$R 2BR')) return 'houston';
+    if (headers.includes('Price_2BR')) return 'chicago';
+    return 'unknown';
+}
+
+function imParsePrice(str) {
+    if (!str) return null;
+    const s = str.trim();
+    if (!s || s === '-' || s === '0' || s.toLowerCase() === 'null') return null;
+    const before = s.split('(')[0];
+    const cleaned = before.replace(/[$,\s]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) || num === 0 ? null : num;
+}
+
+function imParseInt(str) {
+    if (!str) return null;
+    const s = str.trim();
+    if (!s || s === '-' || s.toUpperCase() === 'N/A') return null;
+    const cleaned = s.replace(/[,\sSF]/g, '');
+    const num = parseInt(cleaned, 10);
+    return isNaN(num) ? null : num;
+}
+
+function imParsePct(str) {
+    if (!str) return null;
+    const cleaned = str.replace('%', '').trim();
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+}
+
+function imSafeText(str) {
+    if (!str) return null;
+    const s = str.trim();
+    return s.length > 0 ? s : null;
+}
+
+function imMapRow(row, headers, city, fmt) {
+    const name = imSafeText(row['Building Name']);
+    if (!name) return null;
+    const mapped = {
+        building_name: name,
+        address: imSafeText(row['Address']),
+        city: imSafeText(row['City']) || city,
+        market: city,
+        batch: city + ' Import ' + new Date().toISOString().slice(0, 10),
+        total_units: imParseInt(row['Units'] || row['Total_Units']),
+        owner_entity: imSafeText(row['Owner 1']),
+        owner_entity_2: imSafeText(row['Owner 2']),
+        pm_company: imSafeText(row['Property Manager'] || row['Property_Manager']),
+        concessions: imSafeText(row['Concessions'] || row['Concessions ']),
+        total_available_units: imParseInt(row['Total Available Units']),
+        vacancy_pct: imParsePct(row['% Total Available Units'] || row['% Of available Units']),
+        pain_point_label: imSafeText(row['Pain Point'] || row['Pain_Point']),
+        property_website: imSafeText(row['Website'] || row['Website ']),
     };
-    localStorage.setItem('20b_snapshot_custom', JSON.stringify(snap));
-    renderOutreachTab(snap);
-    closeM('snapshotModal');
-    toast('Snapshot updated', 'ok');
+    if (fmt === 'houston') {
+        mapped.price_studio_high   = imParsePrice(row['$R S']);
+        mapped.price_1br_high      = imParsePrice(row['$R 1BR']);
+        mapped.price_2br_high      = imParsePrice(row['$R 2BR']);
+        mapped.price_3br_high      = imParsePrice(row['$R 3BR']);
+        mapped.price_4br_high      = imParsePrice(row['$R 4BR']);
+        mapped.avg_unit_sqft       = imParseInt(row['Avg Unit Size']);
+        mapped.rentable_sqft       = imParseInt(row['Rentable SF']);
+        mapped.units_studio_avail  = imParseInt(row['Studio']);
+        mapped.units_1br_avail     = imParseInt(row['1BR']);
+        mapped.units_2br_avail     = imParseInt(row['2BR']);
+        mapped.units_3br_avail     = imParseInt(row['3BR']);
+        mapped.units_4br_avail     = imParseInt(row['4BR']);
+        mapped.dom_2br             = imParseInt(row['DOM 2BR']);
+        mapped.dom_3br             = imParseInt(row['DOM 3 BR']);
+        mapped.dom_4br             = imParseInt(row['DOM 4BR']);
+        mapped.listing_url_apartmentiq = imSafeText(row['Apartment IQ']);
+    } else if (fmt === 'chicago') {
+        mapped.price_studio_range  = imSafeText(row['Price_Studio']);
+        mapped.price_1br_range     = imSafeText(row['Price_1BR']);
+        mapped.price_2br_range     = imSafeText(row['Price_2BR']);
+        mapped.price_3br_range     = imSafeText(row['Price_3BR']);
+        mapped.price_4br_range     = imSafeText(row['Price_4BR']);
+        mapped.price_2br_high      = imParsePrice(row['Highest Price 2BR']);
+        mapped.price_3br_high      = imParsePrice(row['Highest Price 3BR']);
+        mapped.price_4br_high      = imParsePrice(row['Highest Price 4BR']);
+        mapped.sqft_2br            = imParseInt(row['SQFT 2BR']);
+        mapped.sqft_3br            = imParseInt(row['SQFT 3BR']);
+        mapped.units_2br_avail     = imParseInt(row['2BR_Avail']);
+        mapped.units_3br_avail     = imParseInt(row['3BR_Avail']);
+        mapped.listing_url_apts    = imSafeText(row['apartments-com']);
+        mapped.listing_url_zillow  = imSafeText(row['zillow-com']);
+    }
+    return mapped;
+}
+
+async function previewImportSheet() {
+    const isUrl = document.getElementById('imSrcUrl').checked;
+    const previewEl = document.getElementById('imPreview');
+    const runBtn = document.getElementById('imRunBtn');
+    previewEl.style.display = 'none';
+    runBtn.disabled = true;
+    _imParsedData = null;
+
+    let csvText = '';
+    try {
+        if (isUrl) {
+            const url = document.getElementById('imUrl').value.trim();
+            if (!url) { toast('Paste a Google Sheet URL first', 'err'); return; }
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            csvText = await res.text();
+        } else {
+            const file = document.getElementById('imFile').files[0];
+            if (!file) { toast('Select a CSV file first', 'err'); return; }
+            csvText = await file.text();
+        }
+    } catch(e) {
+        toast('Could not fetch sheet: ' + e.message, 'err');
+        return;
+    }
+
+    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+    _imHeaders = parsed.meta.fields || [];
+    _imParsedData = parsed.data;
+
+    const fmtRadio = document.querySelector('input[name="imFmt"]:checked').value;
+    const detectedFmt = fmtRadio === 'auto' ? detectImportFormat(_imHeaders) : fmtRadio;
+
+    let preview = `Headers (${_imHeaders.length}): ${_imHeaders.join(' | ')}\n`;
+    preview += `Rows: ${_imParsedData.length} | Format detected: ${detectedFmt.toUpperCase()}\n\n`;
+    _imParsedData.slice(0, 3).forEach((r, i) => {
+        const name = r['Building Name'] || '(no name)';
+        const price = r['$R 2BR'] || r['Price_2BR'] || '—';
+        const vac = r['% Total Available Units'] || r['% Of available Units'] || '—';
+        preview += `${i+1}. ${name} | price_2br: ${price} | vacancy: ${vac}\n`;
+    });
+
+    previewEl.textContent = preview;
+    previewEl.style.display = 'block';
+
+    if (detectedFmt === 'unknown') {
+        previewEl.textContent += '\n⚠ Format unknown — cannot detect column layout. Choose Houston or Chicago manually.';
+        return;
+    }
+    runBtn.disabled = false;
+}
+
+async function runBuildingImport() {
+    const city = document.getElementById('imCity').value.trim();
+    if (!city) { toast('Enter a city name', 'err'); return; }
+    if (!_imParsedData || !_imHeaders) { toast('Preview first', 'err'); return; }
+
+    const fmtRadio = document.querySelector('input[name="imFmt"]:checked').value;
+    const fmt = fmtRadio === 'auto' ? detectImportFormat(_imHeaders) : fmtRadio;
+    if (fmt === 'unknown') { toast('Cannot determine column format', 'err'); return; }
+
+    const progressEl = document.getElementById('imProgress');
+    const runBtn = document.getElementById('imRunBtn');
+    runBtn.disabled = true;
+    progressEl.style.display = 'block';
+    progressEl.textContent = 'Mapping rows…';
+
+    const rows = _imParsedData.map(r => imMapRow(r, _imHeaders, city, fmt)).filter(Boolean);
+    progressEl.textContent = `Upserting ${rows.length} rows to Supabase…`;
+
+    const BATCH = 20;
+    let upserted = 0, errors = 0;
+    for (let i = 0; i < rows.length; i += BATCH) {
+        const batch = rows.slice(i, i + BATCH);
+        const { error } = await window._sbClient
+            .from('campaign_buildings')
+            .upsert(batch, { onConflict: 'building_name,city', ignoreDuplicates: false });
+        if (error) {
+            console.error('Import batch error:', error.message);
+            errors += batch.length;
+        } else {
+            upserted += batch.length;
+        }
+        progressEl.textContent = `Progress: ${Math.min(i + BATCH, rows.length)} / ${rows.length}…`;
+    }
+
+    progressEl.textContent = `Done — ${upserted} upserted, ${errors} errors.`;
+    toast(`Import complete: ${upserted} buildings for ${city}`, errors ? 'err' : 'ok');
+    if (upserted > 0) {
+        await loadAllData();
+    }
+    document.getElementById('imRunBtn').disabled = false;
 }
 
 // =============================================================================
