@@ -365,6 +365,55 @@
         .market-bar-track { flex: 1; height: 6px; background: rgba(0,0,0,0.06); border-radius: 3px; overflow: hidden; }
         .market-bar-fill  { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
 
+        /* ===== GOAL BAR ===== */
+        .goal-bar-wrap {
+            background: linear-gradient(135deg, rgba(79,124,255,0.08), rgba(124,58,237,0.06));
+            border: 1px solid rgba(79,124,255,0.18); border-radius: 16px;
+            padding: 20px 28px; margin-bottom: 20px;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        }
+        .goal-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; }
+        .goal-title { font-size: 0.75rem; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.8px; }
+        .goal-count { font-size: 2.2rem; font-weight: 800; color: #4f7cff; letter-spacing: -1px; line-height: 1; }
+        .goal-count span { font-size: 1rem; color: #9ca3af; font-weight: 500; }
+        .goal-track { height: 10px; background: rgba(79,124,255,0.10); border-radius: 5px; overflow: hidden; margin-bottom: 10px; }
+        .goal-fill { height: 100%; background: linear-gradient(90deg, #4f7cff, #10b981); border-radius: 5px; transition: width 1s ease; }
+        .goal-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+        .goal-stat { font-size: 0.75rem; color: #6b7280; }
+        .goal-stat strong { color: #1a1f36; font-weight: 700; }
+
+        /* ===== MARKET CHIPS ===== */
+        .market-chips { display: flex; gap: 6px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+        .chip-label { font-size: 0.68rem; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px; }
+        .chip { padding: 5px 14px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.10); background: rgba(255,255,255,0.8); color: #6b7280; font-size: 0.78rem; font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+        .chip:hover { background: rgba(79,124,255,0.08); border-color: rgba(79,124,255,0.3); color: #4f7cff; }
+        .chip.active { background: rgba(79,124,255,0.12); border-color: rgba(79,124,255,0.35); color: #4f7cff; font-weight: 600; box-shadow: 0 1px 4px rgba(79,124,255,0.15); }
+
+        /* ===== DEEP DIVE ===== */
+        .deep-dive-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.8rem; color: #9ca3af; font-weight: 600; padding: 12px 0 8px; border-top: 1px solid rgba(0,0,0,0.06); margin-top: 12px; user-select: none; }
+        .deep-dive-toggle:hover { color: #4f7cff; }
+        .deep-dive-arrow { font-size: 0.6rem; transition: transform 0.2s; display: inline-block; }
+        .deep-dive-body { display: none; }
+        .deep-dive-body.open { display: block; }
+
+        /* ===== FOLLOW-UPS ===== */
+        .fu-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 8px; background: rgba(249,250,251,0.8); margin-bottom: 5px; cursor: pointer; transition: background 0.1s; }
+        .fu-row:hover { background: rgba(79,124,255,0.05); }
+        .fu-name { font-weight: 600; color: #1a1f36; font-size: 0.82rem; }
+        .fu-bldg { color: #9ca3af; font-size: 0.7rem; }
+        .fu-date { font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+        .fu-overdue { background: rgba(239,68,68,0.10); color: #dc2626; }
+        .fu-today { background: rgba(245,158,11,0.10); color: #d97706; }
+
+        /* ===== MARKET SUMMARY ===== */
+        .market-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .market-card { background: rgba(255,255,255,0.82); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.92); box-shadow: 0 4px 20px rgba(31,38,135,0.06); border-radius: 14px; padding: 20px; }
+        .market-card-title { font-size: 1rem; font-weight: 700; color: #1a1f36; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+        .market-stat-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 0.82rem; }
+        .market-stat-row:last-child { border: none; }
+        .market-stat-row .lbl { color: #6b7280; }
+        .market-stat-row .val { font-weight: 700; color: #1a1f36; }
+
         @media (max-width: 768px) {
             .two-col, .three-col, .bldg-grid { grid-template-columns: 1fr; }
             .kcol { min-width: 160px; }
@@ -395,42 +444,65 @@
     </div>
 
     <div class="tab-nav">
-        <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
-        <button class="tab-btn" data-tab="pipeline">Pipeline</button>
-        <button class="tab-btn" data-tab="contacts">Contacts</button>
-        <button class="tab-btn" data-tab="outreach">Email Outreach</button>
+        <button class="tab-btn active" data-tab="dashboard">Overview</button>
+        <button class="tab-btn" data-tab="pipeline">Buildings</button>
+        <button class="tab-btn" data-tab="contacts">People</button>
+        <button class="tab-btn" data-tab="outreach">Outreach</button>
     </div>
 
-    <!-- TAB 1: DASHBOARD -->
+    <!-- TAB 1: OVERVIEW -->
     <div class="tab-content active" id="tab-dashboard">
-        <div class="sh">Executive KPIs</div>
-        <div class="metrics-row" id="kpiCards"></div>
 
-        <div class="sh">Outreach Funnel</div>
-        <div class="cc"><div class="funnel" id="funnel"></div></div>
-
-        <div class="sh">Touch Outcomes &amp; Activity</div>
-        <div class="two-col">
-            <div class="cc"><div class="ct">Touch Outcomes</div><div class="cw short"><canvas id="outcomeChart"></canvas></div></div>
-            <div class="cc"><div class="ct">Daily Activity</div><div class="cw short"><canvas id="dailyChart"></canvas></div></div>
+        <!-- 0/20 GOAL BAR -->
+        <div class="goal-bar-wrap">
+            <div class="goal-header">
+                <span class="goal-title">2026 Goal — 20 Buildings</span>
+                <span class="goal-count"><span id="goalSigned">0</span><span> / 20 signed</span></span>
+            </div>
+            <div class="goal-track"><div class="goal-fill" id="goalFill" style="width:0%"></div></div>
+            <div class="goal-stats" id="goalStats"></div>
         </div>
 
-        <div class="sh">Objection Tracker</div>
-        <div class="cc" id="objBox"><div class="no-data">Objections will appear as touches are logged.</div></div>
+        <!-- KPI CARDS -->
+        <div class="metrics-row" id="kpiCards"></div>
 
-        <div class="sh">Building Status Overview</div>
-        <div class="cc"><div class="cw short"><canvas id="bldgStatusChart"></canvas></div></div>
+        <!-- FUNNEL + FOLLOW-UPS + ACTIVITY (two column) -->
+        <div class="two-col" style="align-items:flex-start">
+            <div>
+                <div class="sh">Pipeline Funnel</div>
+                <div class="cc"><div class="funnel" id="funnel"></div></div>
+            </div>
+            <div>
+                <div class="sh">Follow-ups Due</div>
+                <div class="cc" id="followupBox" style="max-height:230px;overflow-y:auto"><div class="no-data">No follow-ups due.</div></div>
+                <div class="sh" style="margin-top:16px">Recent Activity</div>
+                <div class="cc"><div id="actFeed" style="max-height:200px;overflow-y:auto"><div class="no-data">Activity will appear as the team logs touches.</div></div></div>
+            </div>
+        </div>
 
-        <div class="sh">Building Coverage</div>
-        <div class="cc"><div class="tscroll"><table><thead><tr><th>Building</th><th>Owner</th><th>Units</th><th>Contacts</th><th>Building Status</th><th>Last Touch</th></tr></thead><tbody id="bldgTableBody"></tbody></table></div></div>
+        <!-- DEEP DIVE (collapsible) -->
+        <div class="deep-dive-toggle" onclick="toggleDeepDive(this)">
+            <span class="deep-dive-arrow">▶</span>
+            <span>Deep Dive — Charts &amp; Tables</span>
+        </div>
+        <div class="deep-dive-body" id="deepDiveBody">
+            <div class="sh">Touch Outcomes &amp; Activity</div>
+            <div class="two-col">
+                <div class="cc"><div class="ct">Touch Outcomes</div><div class="cw short"><canvas id="outcomeChart"></canvas></div></div>
+                <div class="cc"><div class="ct">Daily Activity</div><div class="cw short"><canvas id="dailyChart"></canvas></div></div>
+            </div>
+            <div class="sh">Objection Tracker</div>
+            <div class="cc" id="objBox"><div class="no-data">Objections will appear as touches are logged.</div></div>
+            <div class="sh">Building Status Overview</div>
+            <div class="cc"><div class="cw short"><canvas id="bldgStatusChart"></canvas></div></div>
+            <div class="sh">Building Coverage</div>
+            <div class="cc"><div class="tscroll"><table><thead><tr><th>Building</th><th>Owner</th><th>Units</th><th>Contacts</th><th>Building Status</th><th>Last Touch</th></tr></thead><tbody id="bldgTableBody"></tbody></table></div></div>
+        </div>
 
-        <div class="sh">Activity Feed</div>
-        <div class="cc"><div id="actFeed" style="max-height:280px;overflow-y:auto"><div class="no-data">Activity will appear as the team logs touches.</div></div></div>
-
-        <div class="footnote">Firebase real-time sync active</div>
+        <div class="footnote">Live Supabase data · <a href="#" onclick="loadAllData();return false">Refresh</a></div>
     </div>
 
-    <!-- TAB 2: PIPELINE -->
+    <!-- TAB 2: BUILDINGS -->
     <div class="tab-content" id="tab-pipeline">
         <div class="controls">
             <input type="text" id="pSearch" placeholder="Search name, building, company…">
@@ -439,11 +511,24 @@
             <select id="pFilterChannel"><option value="">All Channels</option><option value="Phone">Phone</option><option value="Email">Email</option><option value="Both">Both</option></select>
         </div>
         <div class="sh">Contact Pipeline</div>
+        <div class="market-chips" id="pipelineViewChips">
+            <span class="chip-label">View:</span>
+            <button class="chip active" data-view="5" onclick="setKanbanView(this,5)">5 Stages</button>
+            <button class="chip" data-view="9" onclick="setKanbanView(this,9)">Detailed (9)</button>
+        </div>
         <div class="kanban" id="contactKanban"></div>
 
-        <div class="sh" style="margin-top:28px">Building Status Summary</div>
-        <div class="controls">
+        <div class="sh" style="margin-top:28px">Building Grid</div>
+        <div class="controls" style="margin-bottom:8px">
+            <input type="text" id="bldgSearch" placeholder="Search buildings…" oninput="renderPipeline()">
             <select id="bldgFilter"><option value="">All Building Statuses</option></select>
+        </div>
+        <div class="market-chips" id="bldgMarketChips">
+            <span class="chip-label">Market:</span>
+            <button class="chip active" data-market="" onclick="setBldgMarket(this)">All</button>
+            <button class="chip" data-market="Chicago" onclick="setBldgMarket(this)">Chicago</button>
+            <button class="chip" data-market="Houston" onclick="setBldgMarket(this)">Houston</button>
+            <button class="chip" data-market="Dallas" onclick="setBldgMarket(this)">Dallas</button>
         </div>
         <div class="bldg-grid" id="bldgGrid"></div>
     </div>
@@ -466,19 +551,18 @@
         </tr></thead><tbody id="cTableBody"></tbody></table></div></div>
     </div>
 
-    <!-- TAB 4: EMAIL OUTREACH -->
+    <!-- TAB 4: OUTREACH / MARKET SUMMARY -->
     <div class="tab-content" id="tab-outreach">
 
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
-            <div>
-                <h2 style="font-size:1.18rem;font-weight:700;color:#1a1f36;letter-spacing:-0.4px;margin:0">Email Outreach</h2>
-                <p style="font-size:0.78rem;color:#6b7280;margin-top:3px">Enrolled contacts per market · HubSpot Sequences</p>
-            </div>
-            <span id="omLiveBadge" style="font-size:0.7rem;padding:3px 10px;border-radius:20px;font-weight:600;background:rgba(245,158,11,0.12);color:#d97706">⚠ Manual</span>
+        <div style="margin-bottom:24px">
+            <h2 style="font-size:1.18rem;font-weight:700;color:#1a1f36;letter-spacing:-0.4px;margin:0 0 4px">Market Summary</h2>
+            <p style="font-size:0.78rem;color:#6b7280">Pipeline status across all 3 markets · live from Supabase</p>
         </div>
 
-        <!-- Enrolled count cards -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px" id="omEnrolledCards">
+        <div class="market-summary-grid" id="marketSummaryGrid"></div>
+
+        <div class="sh" style="margin-top:8px">HubSpot Sequence Enrollment</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
             <div class="metric-card" style="text-align:left;padding:24px 28px">
                 <div class="mv mv-blue" id="omTotalEnrolled" style="font-size:2.4rem;letter-spacing:-1.5px">—</div>
                 <div class="ml" style="margin-top:6px">Total Enrolled</div>
@@ -496,7 +580,6 @@
             </div>
         </div>
 
-        <!-- HubSpot token input -->
         <div class="cc" style="max-width:520px">
             <div class="ct">HubSpot Connection</div>
             <p style="font-size:0.8rem;color:#6b7280;margin-bottom:16px">Enter your Private App token to pull enrolled counts live from HubSpot. Stored locally in your browser.</p>
@@ -548,10 +631,13 @@
                 <option value="Hard No">Hard No</option>
                 <option value="Unsubscribed">Unsubscribed</option>
             </select></div>
-            <div class="mf"><label>Objections (semicolon-separated)</label><input type="text" id="tmObj" placeholder='"Not interested in STR"; "Bad timing"'></div>
-            <div class="mf"><label>Notes</label><textarea id="tmNotes" placeholder="What happened…"></textarea></div>
-            <div class="mf"><label>Next Step</label><input type="text" id="tmNext" placeholder="e.g. Call back Thursday"></div>
-            <div class="mf"><label>Next Step Date</label><input type="date" id="tmNextDate"></div>
+            <div style="font-size:0.78rem;color:#4f7cff;cursor:pointer;margin-bottom:10px;font-weight:600;user-select:none" onclick="const a=document.getElementById('tmAdvanced');const open=a.style.display!=='none';a.style.display=open?'none':'block';this.textContent=open?'▾ Advanced (notes, next step)':'▴ Advanced (notes, next step)'">▾ Advanced (notes, next step)</div>
+            <div id="tmAdvanced" style="display:none">
+                <div class="mf"><label>Objections (semicolon-separated)</label><input type="text" id="tmObj" placeholder='"Not interested in STR"; "Bad timing"'></div>
+                <div class="mf"><label>Notes</label><textarea id="tmNotes" placeholder="What happened…"></textarea></div>
+                <div class="mf"><label>Next Step</label><input type="text" id="tmNext" placeholder="e.g. Call back Thursday"></div>
+                <div class="mf"><label>Next Step Date</label><input type="date" id="tmNextDate"></div>
+            </div>
             <div class="mactions">
                 <button class="btn btn-s" onclick="closeM('touchModal')">Cancel</button>
                 <button class="btn btn-p" onclick="submitTouch()">Log Touch</button>
@@ -722,7 +808,7 @@ function setup() {
     loadAllData();
 }
 
-function renderAll() { renderDash(); renderPipeline(); renderContacts(); }
+function renderAll() { renderDash(); renderPipeline(); renderContacts(); if (document.getElementById('tab-outreach')?.classList.contains('active')) renderMarketSummary(); }
 
 // Tabs
 document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => {
@@ -817,28 +903,51 @@ function renderDash() {
     const mondayStr = monday.toISOString().substring(0,10);
     const touchesThisWeek = logs.filter(t => (t.timestamp||'').substring(0,10) >= mondayStr).length;
 
-    const bldgsInPipeline  = Object.keys(bData).length;
-    const convertedBldgs   = Object.values(bData).filter(b => b.status === 'Converted').length;
-    const conversionPct    = bldgsInPipeline > 0 ? Math.round(convertedBldgs / bldgsInPipeline * 100) : 0;
+    const bldgsInPipeline = Object.keys(bData).length;
+    const convertedBldgs  = Object.values(bData).filter(b => b.status === 'Converted').length;
+    const warmContacts    = arr.filter(c => c.contact_status === 'Reached – Warm').length;
+
+    // Goal bar
+    const pct = Math.min(100, Math.round(convertedBldgs / 20 * 100));
+    document.getElementById('goalSigned').textContent = convertedBldgs;
+    document.getElementById('goalFill').style.width = pct + '%';
+    const meetingsBldgs  = Object.values(bData).filter(b => b.status === 'Meeting Booked').length;
+    const proposalsBldgs = Object.values(bData).filter(b => b.status === 'Proposal Out').length;
+    const convoBldgs     = Object.values(bData).filter(b => b.status === 'In Conversation').length;
+    document.getElementById('goalStats').innerHTML = `
+        <span class="goal-stat"><strong>${meetingsBldgs}</strong> meetings booked</span>
+        <span class="goal-stat"><strong>${proposalsBldgs}</strong> proposals out</span>
+        <span class="goal-stat"><strong>${convoBldgs}</strong> in conversation</span>
+        <span class="goal-stat"><strong>${pct}%</strong> of goal</span>
+    `;
+
+    // Follow-ups due
+    const fuDue = arr.filter(c => c.next_step_date && c.next_step_date <= today)
+        .sort((a,b) => (a.next_step_date||'').localeCompare(b.next_step_date||'')).slice(0,15);
+    const fuEl = document.getElementById('followupBox');
+    if (!fuDue.length) { fuEl.innerHTML = '<div class="no-data">No follow-ups due today.</div>'; }
+    else fuEl.innerHTML = fuDue.map(c => {
+        const isOverdue = c.next_step_date < today;
+        return `<div class="fu-row" onclick="openDP('${c.id}')"><div><div class="fu-name">${c.full_name||'?'}</div><div class="fu-bldg">${c.building_name||''}${c.next_step?' · '+c.next_step.substring(0,35):''}</div></div><span class="fu-date ${isOverdue?'fu-overdue':'fu-today'}">${isOverdue?'Overdue':'Today'}</span></div>`;
+    }).join('');
 
     document.getElementById('kpiCards').innerHTML = `
         <div class="metric-card"><div class="mv mv-blue">${total.toLocaleString()}</div><div class="ml">Total Contacts</div></div>
         <div class="metric-card"><div class="mv ${touchesToday>0?'mv-green':'mv-orange'}">${touchesToday}</div><div class="ml">Touches Today</div></div>
         <div class="metric-card"><div class="mv ${touchesThisWeek>=300?'mv-green':'mv-orange'}">${touchesThisWeek}/300</div><div class="ml">This Week</div></div>
         <div class="metric-card"><div class="mv" style="color:#7c3aed">${bldgsInPipeline}</div><div class="ml">Buildings in Pipeline</div></div>
-        <div class="metric-card"><div class="mv mv-green">${conversionPct}%</div><div class="ml">Conversion %</div></div>
+        <div class="metric-card"><div class="mv mv-green">${warmContacts}</div><div class="ml">Warm Leads</div></div>
     `;
 
     // Funnel
     const statusCounts = {};
     arr.forEach(c => { const s = c.contact_status||'Not Contacted'; statusCounts[s]=(statusCounts[s]||0)+1; });
     const fPct = (n,d) => d>0?Math.round(n/d*100)+'%':'0%';
-    const nc   = statusCounts['Not Contacted']||0;
-    const att  = statusCounts['Attempting']||0;
-    const warm = statusCounts['Reached – Warm']||0;
-    const prop = statusCounts['Proposal Sent']||0;
-    const cold = statusCounts['Reached – Cold']||0;
-    const reached = warm + prop + cold;
+    const nc       = statusCounts['Not Contacted']||0;
+    const att      = statusCounts['Attempting']||0;
+    const warm     = statusCounts['Reached – Warm']||0;
+    const prop     = statusCounts['Proposal Sent']||0;
+    const meetings = logs.filter(t => t.outcome === 'Meeting Booked').length;
 
     document.getElementById('funnel').innerHTML = `
         <div class="fs" style="width:95%;background:rgba(79,124,255,0.07)"><span class="fn" style="color:#4f7cff">${total}</span><span class="fl">Total Contacts</span></div>
@@ -959,6 +1068,31 @@ function renderActFeed(logs) {
 // =============================================================================
 // TAB 2: PIPELINE
 // =============================================================================
+const KANBAN_5_STAGES = [
+    { label: 'Not Started',  statuses: ['Not Contacted'],                               color: '#6b7280' },
+    { label: 'In Progress',  statuses: ['Attempting'],                                  color: '#4f7cff' },
+    { label: 'Warm',         statuses: ['Reached – Warm', 'Reached – Cold'],            color: '#059669' },
+    { label: 'Proposal Out', statuses: ['Proposal Sent'],                               color: '#7c3aed' },
+    { label: 'Closed',       statuses: ['Hard No','Unsubscribed','Wrong Contact','Gatekeeper Only'], color: '#ef4444' },
+];
+
+let _kanbanView = 5;
+let _bldgMarket = '';
+
+function setKanbanView(btn, n) {
+    document.querySelectorAll('#pipelineViewChips .chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    _kanbanView = n;
+    renderPipeline();
+}
+
+function setBldgMarket(btn) {
+    document.querySelectorAll('#bldgMarketChips .chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    _bldgMarket = btn.dataset.market;
+    renderPipeline();
+}
+
 function renderPipeline() {
     const arr = cArr(), bData = getBuildingData();
     const search   = (document.getElementById('pSearch')?.value||'').toLowerCase();
@@ -983,26 +1117,34 @@ function renderPipeline() {
     bldgSel.innerHTML = '<option value="">All Buildings</option>' + buildings.map(b=>`<option value="${b}">${b}</option>`).join('');
     bldgSel.value = curB;
 
+    // Build Kanban columns
     const container = document.getElementById('contactKanban');
     container.innerHTML = '';
-    config.contact_statuses.forEach(status => {
-        const inStatus = filtered.filter(c => (c.contact_status||'Not Contacted')===status);
+
+    const stages = _kanbanView === 5 ? KANBAN_5_STAGES : config.contact_statuses.map(s => ({ label: s, statuses: [s], color: '#4f7cff' }));
+
+    stages.forEach(stage => {
+        const inStage = filtered.filter(c => stage.statuses.includes(c.contact_status||'Not Contacted'));
+        // For drag-drop: use first status in group as drop target
+        const dropStatus = stage.statuses[0];
+
         const col = document.createElement('div'); col.className = 'kcol';
-        col.innerHTML = `<div class="kch"><span>${status}</span><span class="cnt">${inStatus.length}</span></div>`;
-        const cards = document.createElement('div'); cards.className = 'kcards'; cards.dataset.status = status;
+        col.innerHTML = `<div class="kch" style="border-top:2px solid ${stage.color}20"><span style="color:${stage.color}">${stage.label}</span><span class="cnt">${inStage.length}</span></div>`;
+        const cards = document.createElement('div'); cards.className = 'kcards'; cards.dataset.status = dropStatus;
 
         cards.addEventListener('dragover',  e => { e.preventDefault(); cards.classList.add('drag-over'); });
         cards.addEventListener('dragleave', () => cards.classList.remove('drag-over'));
         cards.addEventListener('drop', e => {
             e.preventDefault(); cards.classList.remove('drag-over');
             const cid = e.dataTransfer.getData('text/plain');
-            moveContact(cid, status);
+            moveContact(cid, dropStatus);
         });
 
-        inStatus.sort((a,b)=>(a.priority_tier||3)-(b.priority_tier||3)).forEach(c => {
+        inStage.sort((a,b)=>(a.priority_tier||3)-(b.priority_tier||3)).forEach(c => {
             const card = document.createElement('div'); card.className = 'kcard'; card.draggable = true;
             const touches = parseInt(c.total_touches)||0;
-            card.innerHTML = `<div class="cn">${c.full_name||'?'}</div><div class="cb">${c.building_name||''}</div>${c.company?`<div class="cp" style="color:#9ca3af">${c.company}</div>`:''}<div class="meta"><span class="badge ${pClass(c.priority_tier)}">${pLabel(c.priority_tier)}</span>${touches?`<span class="badge btouch">${touches} touch${touches>1?'es':''}</span>`:''}</div>`;
+            const statusBadge = _kanbanView === 5 ? `<span class="badge" style="background:rgba(0,0,0,0.05);color:#6b7280;font-size:0.55rem">${c.contact_status||'Not Contacted'}</span>` : '';
+            card.innerHTML = `<div class="cn">${c.full_name||'?'}</div><div class="cb">${c.building_name||''}</div>${c.company?`<div class="cp" style="color:#9ca3af">${c.company}</div>`:''}<div class="meta"><span class="badge ${pClass(c.priority_tier)}">${pLabel(c.priority_tier)}</span>${touches?`<span class="badge btouch">${touches} touch${touches>1?'es':''}</span>`:''}${statusBadge}</div>`;
             card.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain',c.id); card.classList.add('dragging'); });
             card.addEventListener('dragend',   () => card.classList.remove('dragging'));
             card.addEventListener('click',     () => openDP(c.id));
@@ -1012,14 +1154,19 @@ function renderPipeline() {
         col.appendChild(cards); container.appendChild(col);
     });
 
+    // Building grid
     const bFilter = document.getElementById('bldgFilter');
     const curBF = bFilter.value;
     const bStatuses = [...new Set(Object.values(bData).map(b=>b.status))];
     bFilter.innerHTML = '<option value="">All Building Statuses</option>' + bStatuses.map(s=>`<option value="${s}">${s}</option>`).join('');
     bFilter.value = curBF;
 
+    const bldgSearch = (document.getElementById('bldgSearch')?.value||'').toLowerCase();
+
     let bArr = Object.values(bData);
     if (curBF) bArr = bArr.filter(b => b.status === curBF);
+    if (_bldgMarket) bArr = bArr.filter(b => b.contacts.some(c => (c.market||'') === _bldgMarket));
+    if (bldgSearch) bArr = bArr.filter(b => b.name.toLowerCase().includes(bldgSearch) || (b.owner||'').toLowerCase().includes(bldgSearch));
     bArr.sort((a,b) => a.name.localeCompare(b.name));
 
     document.getElementById('bldgGrid').innerHTML = bArr.map(b => `
@@ -1363,6 +1510,7 @@ async function hsSearch(token, filters) {
 }
 
 async function loadOutreachTab() {
+    renderMarketSummary();
     const token = getHsToken();
     const statusEl = document.getElementById('hsTokenStatus');
     const badge    = document.getElementById('omLiveBadge');
@@ -1385,9 +1533,7 @@ async function loadOutreachTab() {
             hsSearch(token, [ef, { propertyName:'city', operator:'EQ', value:'Houston'  }])
         ]);
         setEnrolled(tot, chi, hou);
-        badge.textContent = '● Live';
-        badge.style.background = 'rgba(16,185,129,0.12)';
-        badge.style.color = '#059669';
+        if (badge) { badge.textContent = '● Live'; badge.style.background = 'rgba(16,185,129,0.12)'; badge.style.color = '#059669'; }
         statusEl.textContent = '✓ Updated just now';
         statusEl.style.color = '#10b981';
     } catch(e) {
@@ -1395,6 +1541,60 @@ async function loadOutreachTab() {
         statusEl.style.color = '#ef4444';
         toast('HubSpot fetch failed: ' + e.message, 'err');
     }
+}
+
+// =============================================================================
+// DEEP DIVE TOGGLE
+// =============================================================================
+function toggleDeepDive(el) {
+    const body = document.getElementById('deepDiveBody');
+    const arrow = el.querySelector('.deep-dive-arrow');
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open');
+    arrow.style.transform = isOpen ? '' : 'rotate(90deg)';
+}
+
+// =============================================================================
+// MARKET SUMMARY (Outreach tab)
+// =============================================================================
+function renderMarketSummary() {
+    const arr = cArr(), bData = getBuildingData(), enriched = window._buildings || {};
+    const el = document.getElementById('marketSummaryGrid');
+    if (!el) return;
+
+    const markets = [
+        { name: 'Chicago', color: '#4f7cff' },
+        { name: 'Houston', color: '#10b981' },
+        { name: 'Dallas',  color: '#f59e0b' },
+    ];
+
+    el.innerHTML = markets.map(({ name, color }) => {
+        const mContacts  = arr.filter(c => (c.market||c.city||'') === name);
+        const mBldgs     = Object.values(bData).filter(b => b.contacts.some(c => (c.market||c.city||'') === name));
+        const warm       = mContacts.filter(c => c.contact_status === 'Reached – Warm').length;
+        const att        = mContacts.filter(c => c.contact_status === 'Attempting').length;
+        const signed     = mBldgs.filter(b => b.status === 'Converted').length;
+        const proposals  = mBldgs.filter(b => b.status === 'Proposal Out').length;
+        const meetings   = mBldgs.filter(b => b.status === 'Meeting Booked').length;
+        const inConvo    = mBldgs.filter(b => b.status === 'In Conversation').length;
+        const enrichCount = Object.values(enriched).filter(b => b.market === name).length;
+
+        return `<div class="market-card">
+            <div class="market-card-title">
+                <span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0"></span>
+                ${name}
+            </div>
+            <div class="market-stat-row"><span class="lbl">Buildings in pipeline</span><span class="val">${mBldgs.length}</span></div>
+            <div class="market-stat-row"><span class="lbl">Enriched in DB</span><span class="val">${enrichCount}</span></div>
+            <div class="market-stat-row"><span class="lbl">Total contacts</span><span class="val">${mContacts.length}</span></div>
+            <div class="market-stat-row"><span class="lbl">Attempting</span><span class="val" style="color:#4f7cff">${att}</span></div>
+            <div class="market-stat-row"><span class="lbl">Warm leads</span><span class="val" style="color:#059669">${warm}</span></div>
+            <div class="market-stat-row"><span class="lbl">In conversation</span><span class="val" style="color:#047857">${inConvo}</span></div>
+            <div class="market-stat-row"><span class="lbl">Meetings booked</span><span class="val" style="color:#047857">${meetings}</span></div>
+            <div class="market-stat-row"><span class="lbl">Proposals out</span><span class="val" style="color:#0ea5e9">${proposals}</span></div>
+            <div class="market-stat-row"><span class="lbl">Signed</span><span class="val" style="color:#10b981;font-size:1rem">${signed}</span></div>
+        </div>`;
+    }).join('');
 }
 
 // =============================================================================
