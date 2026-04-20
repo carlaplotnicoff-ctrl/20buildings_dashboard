@@ -1,0 +1,22 @@
+# For Supabase CLI — links this project to the hosted Supabase instance
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+
+[db]
+port = 54322
+major_version = 17
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+
+[edge_runtime]
+enabled = true
+
+[analytics]
+enabled = false

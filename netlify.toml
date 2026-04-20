@@ -1,8 +1,8 @@
 [build]
-  publish = "public"
-  functions = "netlify/functions"
+  command = "npm run build"
+  publish = "dist"
 
 [[redirects]]
-  from = "/api/hubspot"
-  to = "/.netlify/functions/hubspot"
+  from = "/*"
+  to = "/index.html"
   status = 200

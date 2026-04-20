@@ -1,0 +1,11 @@
+city,contact_raw,company,building,category,notes
+"Chicago","Jordan Roehl","Lendlease","Cascade","WARM_SELF_IDD_DM","Phase 2 open question"
+"Chicago","Mary Ann Klingler","Abacus Capital","TRIO Apartments","WARM_SELF_IDD_DM","Awaiting reply"
+"Chicago","Stephanie Brock","Waterton","Shoreham / Tides","WARM_SELF_IDD_DM","Await callback"
+"Chicago","9× Heitman contacts (incl. Melanie Varrato)","Heitman","180 N Jefferson","RESEARCH_WRONG_DATA","Heitman does NOT own building"
+"Chicago","5× L&B contacts","L&B Realty","Parc Huron","RESEARCH_WRONG_DATA","Sold April 2019 (7yr stale)"
+"Chicago","Paul Purewal","Onni Group","(various)","DECLINE_STRUCTURAL","""We operate this model ourselves"" — platform"
+"Chicago","Greg Wilks","Onni Group","(various)","DECLINE_DNC","""Not interested"" + wrong function"
+"Houston","**Lauren Granit**","Kimco","The Driscoll at River Oaks","WARM_SELF_IDD_DM","**Pitched Apr 16 by Marcus w/ one-pager link. Opened 3×.** Strong warm signal. Await reply or follow up in 3 biz days."
+"Houston","Donny Lo","Kimco","The Driscoll","WARM_NEEDS_PITCH","""Can you let me know what this is?"""
+"Charlotte","**Jan Berland**","Northwood Investors","Uptown 550 on Brooklyn","WARM_SELF_IDD_DM",""

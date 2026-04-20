@@ -1,7 +1,23 @@
 {
-  "name": "pipeline-dashboard",
-  "version": "1.0.0",
+  "name": "spire",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.9.0",
+    "@supabase/supabase-js": "^2.102.1",
+    "@vibe/core": "^4.0.1",
+    "papaparse": "^5.5.3",
+    "pg": "^8.20.0",
+    "preact": "^10.29.1"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.5",
+    "vite": "^8.0.4"
   }
 }
